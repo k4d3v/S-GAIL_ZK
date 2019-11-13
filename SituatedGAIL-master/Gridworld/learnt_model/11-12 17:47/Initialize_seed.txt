@@ -1,0 +1,4 @@
+Grid world Seed:
+1024
+Seed:
+1024

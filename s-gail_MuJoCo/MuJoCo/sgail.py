@@ -28,9 +28,14 @@ def norm(x, a_min, a_max):
     return result
 
 def playGame(finetune=1):
+    '''
+    Main procedure. Initializes a TRPO agent and learns based on expert`s trajectories provided in dir Expert using S-GAIL algo.
+    :param finetune: 1 if weights are already given and to be finetunned
+    :return:
+    '''
 
-    demo_dir = "Your_Path/Expert/"
-    param_dir = "Your_Path/params_MuJoCo/"
+    demo_dir = "Expert/"
+    param_dir = "params_MuJoCo/"
     state_dim = 6
     encode_dim = 2
     action_dim = 2
@@ -39,9 +44,9 @@ def playGame(finetune=1):
     GPU = 0
 
     time = datetime.now()
-    new_dir_path = "/log_mujoco/%d-%d %d:%d" %(time.month, time.day, time.hour, time.minute)
+    new_dir_path = "log_mujoco/%d-%d %d:%d" %(time.month, time.day, time.hour, time.minute)
     os.mkdir(new_dir_path)
-    print("Make dirctory: " + new_dir_path)
+    print("Make directory: " + new_dir_path)
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -94,7 +99,7 @@ def playGame(finetune=1):
                 param_dir + "baseline_model_299.h5")
         else:
             agent.generator.load_weights(
-                param_dir + "Your_Path/generator_bc_model_BC_norm.h5")
+                param_dir + "generator_bc_model_BC_norm.h5")
         print("Weight load successfully")
     except:
         print("Cannot find the weight")

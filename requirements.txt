@@ -1,0 +1,9 @@
+numpy
+scipy
+tensorflow==0.12.1
+keras==1.2.2
+matplotlib
+sklearn
+h5py
+gym
+mujoco-py<2.1,>=2.0

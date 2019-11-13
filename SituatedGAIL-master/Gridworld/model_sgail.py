@@ -32,11 +32,12 @@ from datetime import datetime
 #import pyclustering
 #from pyclustering.cluster import xmeans
 
+# Configuration of hyperparams
 parser = argparse.ArgumentParser(description="TRPO")
-parser.add_argument("--paths_per_collect", type=int, default=20)       # Number of trajectory
+parser.add_argument("--paths_per_collect", type=int, default=10)       # Number of trajectory (20)
 parser.add_argument("--max_step_limit", type=int, default=25)          # Max step per episode
 parser.add_argument("--min_step_limit", type=int, default=0)           # Min step per episode            
-parser.add_argument("--n_iter", type=int, default=300)                 # Epoch
+parser.add_argument("--n_iter", type=int, default=7)                 # Epoch (300)
 parser.add_argument("--gamma", type=float, default=.95)                # Discount factor (MDP)
 parser.add_argument("--lam", type=float, default=.97)                  # Lamda (TRPO)
 parser.add_argument("--max_kl", type=float, default=0.01)              # Max of KL-divergence
@@ -56,6 +57,10 @@ parser.add_argument("--w", type=float, default=0)                      # Schedul
 args = parser.parse_args()
 
 class TRPOAgent(object):
+    '''
+    Represents the learning agent with its D and G nets and TRPO procedure
+    '''
+    # Configuration of the agent containing all the hyperparams
     config = dict2(paths_per_collect = args.paths_per_collect,
                    max_step_limit = args.max_step_limit,
                    min_step_limit = args.min_step_limit,
@@ -77,10 +82,14 @@ class TRPOAgent(object):
                    inner_loop = args.inner_loop)
 
     def __init__(self, sess, state_dim, encode_dim, action_dim, filepath):
-
-        #
-        # Initialize data
-        #
+        '''
+        Initialize
+        @param sess: tf session
+        @param state_dim: dimension of state space
+        @param encode_dim: See paper. Used for task var.
+        @param action_dim: dimension of action space
+        @param filepath: path where model should be saved
+        '''
         self.dir_path = filepath
 
         self.seed = seed_initialize(filepath, self.config.seed)
@@ -93,6 +102,7 @@ class TRPOAgent(object):
         self.encode_dim = encode_dim
         self.action_dim = action_dim
 
+        # Some important vars
         self.state = state = tf.placeholder(dtype, shape=[None, state_dim])
         self.state_5times = state_5times = tf.placeholder(dtype, shape=[None, state_dim*5])
         self.encodes = encodes = tf.placeholder(dtype, shape=[None, encode_dim])
@@ -108,14 +118,15 @@ class TRPOAgent(object):
         self.noise = noise = tf.placeholder(dtype, shape=[None, action_dim])
         self.beta = beta = tf.placeholder(dtype, shape=[None, 1])
 
-        #
-        # Create neural network.
-        #
+        # Create D and G
         print ("Now we build trpo generator")
         self.generator = self.create_generator(state, encodes, action_dim)
         print ("Now we build discriminator")
         self.discriminator = self.create_discriminator(state, actions, noise, encodes, policy)
-        
+
+        '''
+        TODO: What exactly are those for?
+        '''
         self.demo_idx = 0
 
         action_dist_mu = self.generator.outputs[0]
@@ -131,7 +142,7 @@ class TRPOAgent(object):
         ratio_n = tf.exp(log_p_n - log_oldp_n)
         Nf = tf.cast(N, dtype)
         surr = -tf.reduce_mean(ratio_n * advants)
-        var_list = self.generator.trainable_weights
+        var_list = self.generator.trainable_weights # Save weights of G
 
         kl = gauss_KL(oldaction_dist_mu, oldaction_dist_logstd,
                       action_dist_mu, action_dist_logstd) / Nf
@@ -160,6 +171,7 @@ class TRPOAgent(object):
                                    self.config.batch_size, self.dir_path)
         self.sess.run(tf.global_variables_initializer())
 
+        # Create a grid object to store the values
         self.GridMDP = gridworld.GridMDP([[0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
@@ -173,7 +185,13 @@ class TRPOAgent(object):
                 [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0]], terminals=[(1.0, 1.0)])
 
     def create_generator(self, state, encodes, action_dim):
-
+        '''
+        Create the generator network
+        @param state: state dimension
+        @param encodes: dimension for task var.
+        @param action_dim: dimension of action
+        @return: The newly built model
+        '''
         K.set_learning_phase(1)
 
         states = Input(tensor=state)
@@ -189,7 +207,15 @@ class TRPOAgent(object):
         return model
 
     def create_discriminator(self, state, action, noise, encode, policy):
-
+        '''
+        Creates the discriminator net
+        @param state:
+        @param action:
+        @param noise: Has dimension of action space
+        @param encode: Dimension of task variable
+        @param policy: A tf placeholder. Will contain the policy (action vector)
+        @return: Newly built tf model
+        '''
         states = Input(tensor=state)
         actions = Input(tensor=action)
         noises = Input(tensor=noise)
@@ -224,7 +250,14 @@ class TRPOAgent(object):
     # Action select
     #
     def act(self, state, encodes, logstds, *args):
-
+        '''
+        Sample actions and construct policy array. Used during rollout (See utils.py)
+        @param state:
+        @param encodes:
+        @param logstds:
+        @param args:
+        @return:
+        '''
         action_dist_mu = \
                 self.sess.run(
                     self.action_dist_mu,
@@ -296,9 +329,15 @@ class TRPOAgent(object):
         return policy        
 
     def learn(self, state_expert, action_expert, new_dir_path):
-
+        '''
+        Learning procedure
+        @param state_expert: States sampled from demos
+        @param action_expert: Actions sampled from demos
+        @param new_dir_path: Where the model is going to get stored
+        @return:
+        '''
         # 
-        # Infromation Writing
+        # Information Writing
         #
         file_path = new_dir_path + "/Readme.txt"
         f_read = open(file_path, "a")
@@ -364,7 +403,7 @@ class TRPOAgent(object):
             #
             # Load encode data
             #
-            demo_dir = "Your_Path/Expert/"       
+            demo_dir = "Expert/"
             encodes_d = np.load(demo_dir + "encode_5.npy")
 
             encode_labels = [(0,1) for num_expert in range(30)]

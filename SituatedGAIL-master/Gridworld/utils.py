@@ -20,6 +20,8 @@ import gridworld
 from gridworld import initialize
 from datetime import datetime
 
+# Contains scripts and procedures needed during learning.
+
 dtype = tf.float32
 
 def seed_initialize(path, seed):

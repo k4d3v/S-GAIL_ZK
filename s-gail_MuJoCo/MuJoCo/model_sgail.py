@@ -294,9 +294,20 @@ class TRPOAgent(object):
     # Learning 
     #
     def learn(self, state_expert, action_expert, action_expert_ori, s_max, s_min, a_max, a_min, new_dir_path):
-
+        '''
+        Impl. of S-GAIL learning procedure. In each iter. generates trajs from G and updates G (via TRPO) and D (Adam optimizer).
+        :param state_expert:
+        :param action_expert:
+        :param action_expert_ori:
+        :param s_max:
+        :param s_min:
+        :param a_max:
+        :param a_min:
+        :param new_dir_path:
+        :return:
+        '''
         # 
-        # Infromation Writing
+        # Information Writing
         #
         file_path = new_dir_path + "/Readme.txt"
         f_read = open(file_path, "a")
@@ -370,7 +381,7 @@ class TRPOAgent(object):
             #
             # Load encode expert data
             #
-            demo_dir = "Your_path/Expert/"
+            demo_dir = "Expert/"
             encodes_d = np.load(demo_dir + "encode_mujoco.npy")
 
             encode_labels = [(0,1) for num_expert in range(30)]

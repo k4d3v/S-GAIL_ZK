@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import operator
 import random
 
+# Representation of the grid world.
+
 def initialize(path, seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -38,8 +40,14 @@ class MDP:
             return self.actlist
 
 class GridMDP(MDP):
-
     def __init__(self, grid, terminals, init=(0, 0), gamma=.9):
+        '''
+        Initialize a grid structure
+        @param grid: Grid matrix containing values and Nones
+        @param terminals: TODO
+        @param init:
+        @param gamma:
+        '''
         grid.reverse()  # because we want row 0 on bottom, not on top                                                                                                  
         MDP.__init__(self, init, actlist=[],
                      terminals=terminals, gamma=gamma)

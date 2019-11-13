@@ -20,9 +20,14 @@ sys.setrecursionlimit(10000)
 from datetime import datetime
 
 def playGame(finetune=1):
+    '''
+    Main script. Performs s-gail on expert demos provided using TRPO.
+    @param finetune: 1 if weights are already given and should be finetuned
+    @return:
+    '''
 
-    demo_dir = "Your_Path/Expert/"
-    param_dir = "Your_Path/params/"
+    demo_dir = "Expert/"
+    param_dir = "params/"
     state_dim = 2
     encode_dim = 3
     action_dim = 4
@@ -31,9 +36,9 @@ def playGame(finetune=1):
 
     #network initialize (get time)
     time = datetime.now()
-    new_dir_path = "Your_Path/%d-%d %d:%d" %(time.month, time.day, time.hour, time.minute)
+    new_dir_path = "learnt_model/%d-%d %d:%d" %(time.month, time.day, time.hour, time.minute)
     os.mkdir(new_dir_path)
-    print("Make dirctory: " + new_dir_path)
+    print("Make directory: " + new_dir_path)
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -69,7 +74,7 @@ def playGame(finetune=1):
                 param_dir + "baseline_model_188.h5")
         else:
             agent.generator.load_weights(
-                param_dir + "Your_Path/generator_bc_model_BC50_norm.h5")
+                param_dir + "weights/generator_bc_model_BC50_norm.h5")
         print("Weight load successfully")
     except:
         print("Cannot find the weight")

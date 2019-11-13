@@ -52,7 +52,7 @@ if __name__ == "__main__":
     #
     # Get argment (path , seed, epoch of the model)
     #
-    path = "Your_path/log_mujoco/" + args[1]
+    path = "log_mujoco/" + args[1]
     seed = int(args[2])
     epoch = int(args[3])
 

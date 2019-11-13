@@ -20,8 +20,8 @@ import copy
 from datetime import datetime
 import gym
 
-env = gym.make('Reacher-v1')
-#env = gym.make('Reacher-v2')
+#env = gym.make('Reacher-v1')
+env = gym.make('Reacher-v2')
 env.reset()
 
 dtype = tf.float32
