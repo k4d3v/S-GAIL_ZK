@@ -82,19 +82,20 @@ class TRPOAgent(object):
                    inner_loop = args.inner_loop)
 
     def __init__(self, sess, state_dim, encode_dim, action_dim, filepath):
-        '''
+        """
         Initialize
         @param sess: tf session
         @param state_dim: dimension of state space
         @param encode_dim: See paper. Used for task var.
         @param action_dim: dimension of action space
         @param filepath: path where model should be saved
-        '''
+        """
         self.dir_path = filepath
 
         self.seed = seed_initialize(filepath, self.config.seed)
         print(self.seed)
 
+        # Set variables from constructor
         self.sess = sess
         self.buffer = ReplayBuffer(self.config.buffer_size)
         self.buffer_new = ReplayBuffer(self.config.buffer_size)
@@ -102,7 +103,7 @@ class TRPOAgent(object):
         self.encode_dim = encode_dim
         self.action_dim = action_dim
 
-        # Some important vars
+        # Some important vars for tensorflow
         self.state = state = tf.placeholder(dtype, shape=[None, state_dim])
         self.state_5times = state_5times = tf.placeholder(dtype, shape=[None, state_dim*5])
         self.encodes = encodes = tf.placeholder(dtype, shape=[None, encode_dim])
@@ -124,9 +125,7 @@ class TRPOAgent(object):
         print ("Now we build discriminator")
         self.discriminator = self.create_discriminator(state, actions, noise, encodes, policy)
 
-        '''
-        TODO: What exactly are those for?
-        '''
+        # Looks like important vars used during training like log probs and gradients
         self.demo_idx = 0
 
         action_dist_mu = self.generator.outputs[0]
@@ -166,6 +165,7 @@ class TRPOAgent(object):
         self.fvp = flatgrad(gvp, var_list)
         self.gf = GetFlat(self.sess, var_list)
         self.sff = SetFromFlat(self.sess, var_list)
+        # Create NN baseline based on expert demos for predicting actions. Will be used for training the Generator.
         self.baseline = NNBaseline(sess, state, encodes, state_dim, encode_dim,
                                    self.config.lr_baseline, self.config.b_iter,
                                    self.config.batch_size, self.dir_path)
@@ -599,8 +599,16 @@ class TRPOAgent(object):
                 #
                 # Update Discriminator (using Keras)
                 #
-                d_loss_real = self.discriminator.train_on_batch([state_d[start_d:start_d + batch_size_expert],actions_d[start_d:start_d + batch_size_expert],noise_expert[:batch_size_expert],encodes_d[start_d:start_d + batch_size_expert],policy_d[start_d:start_d + batch_size_expert]], np.ones(batch_size_expert))
-                d_loss_fake = self.discriminator.train_on_batch([state_new_n[start_n:start_n + batch_size_agent],actions_new_n[start_n:start_n + batch_size_agent],noise_agent[:batch_size_agent],encodes_new_n[start_n:start_n + batch_size_agent],policies_new_n[start_n:start_n + batch_size_agent]], np.zeros(batch_size_agent))
+                d_loss_real = self.discriminator.train_on_batch(
+                    [state_d[start_d:start_d + batch_size_expert], actions_d[start_d:start_d + batch_size_expert],
+                     noise_expert[:batch_size_expert], encodes_d[start_d:start_d + batch_size_expert],
+                     policy_d[start_d:start_d + batch_size_expert]],
+                    np.ones(batch_size_expert))
+                d_loss_fake = self.discriminator.train_on_batch(
+                    [state_new_n[start_n:start_n + batch_size_agent], actions_new_n[start_n:start_n + batch_size_agent],
+                     noise_agent[:batch_size_agent], encodes_new_n[start_n:start_n + batch_size_agent],
+                     policies_new_n[start_n:start_n + batch_size_agent]],
+                    np.zeros(batch_size_agent))
                 loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
                 #print self.discriminator.summary()
@@ -637,7 +645,8 @@ class TRPOAgent(object):
                     else:
                         beta = self.config.beta
 
-                    output_d_for_reward = (np.log(output_d + 1e-10) - np.log(anti)).flatten() + beta * np.log(np.max(path["policies"], axis=1) + 1e-10).flatten()
+                    output_d_for_reward = (np.log(output_d + 1e-10) - np.log(anti)).flatten()\
+                                          + beta * np.log(np.max(path["policies"], axis=1) + 1e-10).flatten()
 
                     path["rewards"] = output_d_for_reward.flatten()
 
@@ -703,6 +712,7 @@ class TRPOAgent(object):
 
                 #
                 # Update Generator's parametor using TRPO
+                # TODO: pyTorch implementation
                 #
                 feed = {self.state: state_new_n,
                         self.encodes: encodes_new_n,

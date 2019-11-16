@@ -104,7 +104,20 @@ def look(x):
 # 
 def rollout_contin(agent, state_dim, encode_dim, actions_dim,
                    max_step_limit, paths_per_collect, count_goalagent, epoch, encode_list=None, iter_num=None):
-
+    '''
+    Performs a rollout and returns sampled trajs and goals
+    :param agent: The agent calling
+    :param state_dim:
+    :param encode_dim:
+    :param actions_dim:
+    :param max_step_limit: See config structure. Max number of steps
+    :param paths_per_collect: Number of collected trajs. Hardcoded in model line 415
+    :param count_goalagent: Number of reached goals. Starts at 0
+    :param epoch: Current iteration
+    :param encode_list:
+    :param iter_num:
+    :return:
+    '''
     paths = []
     timesteps_sofar = 0
     encode_axis = 0
@@ -166,6 +179,7 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
                     else:
                         start_flag = 1
 
+        # Collect n steps per trajectory
         for i in range(max_step_limit):
 
             states.append(state)
@@ -216,6 +230,9 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
     return paths, count_goalagent
 
 class LinearBaseline(object):
+    """
+    A simple linear baseline
+    """
     coeffs = None
 
     def _features(self, path):
@@ -276,6 +293,9 @@ class TimeDependentBaseline(object):
                 return self.baseline[:lenpath]
 
 class NNBaseline(object):
+    """
+    A Neural Network baseline
+    """
     def __init__(self, sess, state, encodes, state_dim, encode_dim, lr_baseline,
                  b_iter, batch_size, dir_path):
         print ("Now we build baseline")
@@ -291,6 +311,15 @@ class NNBaseline(object):
         f_read.close()
 
     def create_net(self, state, encodes, state_dim, encode_dim, lr_baseline):
+        """
+        Build NN model for baseline using states
+        :param state:
+        :param encodes:
+        :param state_dim:
+        :param encode_dim:
+        :param lr_baseline:
+        :return:
+        """
         K.set_learning_phase(1)
 
         states = Input(tensor = state)
@@ -310,6 +339,12 @@ class NNBaseline(object):
         return model
 
     def fit(self, paths, batch_size):
+        """
+        Fit NN based on expert data
+        :param paths: Expert trajs
+        :param batch_size: Batch size while learning
+        :return:
+        """
         state = np.concatenate([path["state"] for path in paths])
         encodes = np.concatenate([path["encodes"] for path in paths])
         returns = np.concatenate([path["returns"] for path in paths])
@@ -352,6 +387,11 @@ class NNBaseline(object):
         return b_loss
 
     def predict(self, path):
+        """
+        Predicts actions based on states along the trajectory
+        :param path: State traj
+        :return: Sampled actions
+        """
         if self.first_time:
             return np.zeros(pathlength(path))
         else:
@@ -430,7 +470,9 @@ class dict2(dict):
 
 
 class ReplayBuffer(object):
-
+    '''
+    Represents a buffer for storing previous trajectories
+    '''
     def __init__(self, buffer_size):
         self.buffer_size = buffer_size
         self.num_paths = 0

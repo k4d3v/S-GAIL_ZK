@@ -20,11 +20,11 @@ sys.setrecursionlimit(10000)
 from datetime import datetime
 
 def playGame(finetune=1):
-    '''
+    """
     Main script. Performs s-gail on expert demos provided using TRPO.
-    @param finetune: 1 if weights are already given and should be finetuned
+    @param finetune: 1 if weights of generator and discriminator are already given and should be finetuned
     @return:
-    '''
+    """
 
     demo_dir = "Expert/"
     param_dir = "params/"
@@ -40,6 +40,8 @@ def playGame(finetune=1):
     os.mkdir(new_dir_path)
     print("Make directory: " + new_dir_path)
 
+    # Configure tensorflow session and load on keras
+    # TODO: Here is where pyTorch work starts
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     config.gpu_options.visible_device_list = str(GPU)
@@ -59,6 +61,7 @@ def playGame(finetune=1):
 
     print("main seed:", seed)
 
+    # Load expert demos
     state_expert = np.load(demo_dir + "state_5.npy")
     action_expert = np.load(demo_dir + "action_5.npy")
     
@@ -81,6 +84,7 @@ def playGame(finetune=1):
 
     print("Gridworld Agent learning start.")
 
+    # Call agent learning procedure
     epoch = agent.learn(state_expert, action_expert, new_dir_path)
 
     print("Finish.")

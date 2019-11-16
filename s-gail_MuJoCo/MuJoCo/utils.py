@@ -125,7 +125,25 @@ def norm_act(x, a_min, a_max):
 
 def rollout_contin(agent, state_dim, encode_dim, actions_dim, s_max, s_min, a_max, a_min,
                    max_step_limit, min_step_limit, paths_per_collect, count_goalagent, epoch, encode_list=None, iter_num=None):
-
+    '''
+    Performs a rollout and returns the trajs and goals
+    :param agent:
+    :param state_dim:
+    :param encode_dim:
+    :param actions_dim:
+    :param s_max:
+    :param s_min:
+    :param a_max:
+    :param a_min:
+    :param max_step_limit:
+    :param min_step_limit:
+    :param paths_per_collect:
+    :param count_goalagent:
+    :param epoch:
+    :param encode_list:
+    :param iter_num:
+    :return:
+    '''
     paths = []
     timesteps_sofar = 0
     encode_axis = 0
