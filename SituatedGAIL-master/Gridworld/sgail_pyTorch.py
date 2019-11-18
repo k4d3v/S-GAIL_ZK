@@ -3,14 +3,9 @@
 import numpy as np
 import argparse
 import time
-from keras.models import model_from_json, Model
-from keras.models import Sequential
-from keras.layers.core import Dense, Dropout, Activation, Flatten
-from keras.optimizers import Adam
-import tensorflow as tf
 import json
 
-from model_sgail import TRPOAgent
+from model_sgail_pyTorch import TRPOAgent
 
 import gridworld
 
@@ -42,16 +37,9 @@ def playGame(finetune=1):
 
     # Configure tensorflow session and load on keras
     # TODO: Here is where pyTorch work starts
-    # TODO: Maybe not needed.
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    config.gpu_options.visible_device_list = str(GPU)
-    sess = tf.Session(config=config)
-    from keras import backend as K
-    K.set_session(sess)
 
     # define the model
-    agent = TRPOAgent(sess, state_dim, encode_dim, action_dim, new_dir_path)
+    agent = TRPOAgent(state_dim, encode_dim, action_dim, new_dir_path)
 
     seed = agent.config.seed
     file_path = new_dir_path + "/Main_seed.txt"

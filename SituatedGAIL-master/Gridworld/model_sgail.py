@@ -867,31 +867,37 @@ class TRPOAgent(object):
         ax.set_title("Discriminator_loss")
         ax2.plot(t,generator_loss)
         ax2.set_title("Generator_reward")
+        plt.xlabel("Iteration Nr.")
+        plt.ylabel("Loss Value")
         plt.savefig(new_dir_path + '/loss.png')
-        np.save(file_results+ "reward_Generator.npy", generator_loss)
-        np.save(file_results+ "loss_Discriminator.npy", losses)
+        np.save(file_results + "reward_Generator.npy", generator_loss)
+        np.save(file_results + "loss_Discriminator.npy", losses)
 
         #
         # Learning rate of Baseline
         #
         baseline_loss = np.array(baseline_loss)
         t = np.arange(progress)
-        fig = plt.figure(figsize = (15,15))
-        ax = fig.add_subplot(1,1,1)
-        ax.plot(t,baseline_loss)
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(t, baseline_loss)
         ax.set_title("baseline_loss")
+        plt.xlabel("Iteration Nr.")
+        plt.ylabel("Loss Value")
         plt.savefig(new_dir_path + '/baseline_loss.png')
-        np.save(file_results+ "baseline_loss.npy", baseline_loss)
-        
+        np.save(file_results + "baseline_loss.npy", baseline_loss)
+
         #
         # Number of goal agent
         #
         goal_agent = np.array(count_goalagent_stack)
         t = np.arange(progress)
-        fig = plt.figure(figsize = (15,15))
-        ax = fig.add_subplot(1,1,1)
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(1, 1, 1)
         ax.plot(t, goal_agent)
         ax.set_title("Goal_agent")
+        plt.xlabel("Iteration Nr.")
+        plt.ylabel("Number of Reached Goals")
         plt.savefig(new_dir_path + '/goal_agent.png')
 
         return progress

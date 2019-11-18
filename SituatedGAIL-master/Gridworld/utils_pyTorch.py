@@ -21,8 +21,14 @@ from gridworld import initialize
 from datetime import datetime
 
 # Contains scripts and procedures needed during learning.
+from torch import nn
 
 dtype = tf.float32
+
+
+def lru(x):
+    return nn.LeakyReLU()(x)
+
 
 def seed_initialize(path, seed):
     print("utils seed", seed)
@@ -35,69 +41,83 @@ def seed_initialize(path, seed):
     f = open(file_path, "a")
     f.write("Seed:\n" + str(seed) + "\n")
     f.close()
-    
+
     return seed
+
 
 def discount(x, gamma):
     assert x.ndim >= 1
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
+
 def gauss_prob_val(mu, logstd, x):
     std = np.exp(logstd)
     var = np.square(std)
-    gp = np.exp(-np.square(x - mu)/(2*var)) / ((2*np.pi)**.5 * std)
+    gp = np.exp(-np.square(x - mu) / (2 * var)) / ((2 * np.pi) ** .5 * std)
     return np.prod(gp, axis=1)
+
 
 def gauss_prob(mu, logstd, x):
     std = tf.exp(logstd)
     var = tf.square(std)
-    gp = tf.exp(-tf.square(x - mu)/(2*var)) / ((2*np.pi)**.5 * std)
+    gp = tf.exp(-tf.square(x - mu) / (2 * var)) / ((2 * np.pi) ** .5 * std)
     return tf.reduce_prod(gp, [1])
 
+
 def gauss_log_prob(mu, logstd, x):
-    var = tf.exp(2*logstd)
-    gp = -tf.square(x - mu)/(2 * var) - .5*tf.log(tf.constant(2*np.pi)) - logstd
+    var = tf.exp(2 * logstd)
+    gp = -tf.square(x - mu) / (2 * var) - .5 * tf.log(tf.constant(2 * np.pi)) - logstd
     return tf.reduce_sum(gp, [1])
+
 
 def gauss_selfKL_firstfixed(mu, logstd):
     mu1, logstd1 = map(tf.stop_gradient, [mu, logstd])
     mu2, logstd2 = mu, logstd
     return gauss_KL(mu1, logstd1, mu2, logstd2)
 
+
 def gauss_KL(mu1, logstd1, mu2, logstd2):
-    var1 = tf.exp(2*logstd1)
-    var2 = tf.exp(2*logstd2)
-    kl = tf.reduce_sum(logstd2 - logstd1 + (var1 + tf.square(mu1 - mu2))/(2*var2) - 0.5)
+    var1 = tf.exp(2 * logstd1)
+    var2 = tf.exp(2 * logstd2)
+    kl = tf.reduce_sum(logstd2 - logstd1 + (var1 + tf.square(mu1 - mu2)) / (2 * var2) - 0.5)
     return kl
 
+
 def gauss_ent(mu, logstd):
-    h = tf.reduce_sum(logstd + tf.constant(0.5*np.log(2*np.pi*np.e), tf.float32))
+    h = tf.reduce_sum(logstd + tf.constant(0.5 * np.log(2 * np.pi * np.e), tf.float32))
     return h
 
+
 def gauss_sample(mu, logstd):
-    return mu + tf.exp(logstd)*tf.random_normal(tf.shape(logstd))
+    return mu + tf.exp(logstd) * tf.random_normal(tf.shape(logstd))
+
 
 def var_shape(x):
     out = [k.value for k in x.get_shape()]
     assert all(isinstance(a, int) for a in out), \
-            "shape function assumes that shape is fully known"
+        "shape function assumes that shape is fully known"
     return out
+
 
 def numel(x):
     return np.prod(var_shape(x))
+
 
 def flatgrad(loss, var_list):
     grads = tf.gradients(loss, var_list)
     return tf.concat(0, [tf.reshape(grad, [numel(v)])
                          for (v, grad) in zip(var_list, grads)])
 
+
 def get_feat(imgs, feat_extractor):
     x = preprocess_input(imgs.astype(np.float32))
     x = feat_extractor.predict(x)
     return x
 
+
 def look(x):
     return x
+
 
 #
 # Create trajectory
@@ -125,9 +145,9 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
     conjugate_gradient = 0
 
     for p in range(paths_per_collect):
-        #print ("Rollout index:", p)
+        # print ("Rollout index:", p)
         states, encodes, actions, logstds = \
-                [], [], [], []
+            [], [], [], []
         policies = []
         trajectory = []
         state_1times = []
@@ -136,7 +156,7 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
         length = 0
 
         state = np.ones((1, 2), dtype=np.float32)
-        listA = [0,1,2,3,4,5,6,7,8,9,10]
+        listA = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
         start_flag = 0
         state_all = agent.GridMDP.states
@@ -195,7 +215,7 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
             policies.append(policy)
             states_without_pre.append(state[0])
             action_1dim = 0.33 * np.argmax(action[0])
-            trajectory.append(np.concatenate([state[0]/10.0, [action_1dim]]))
+            trajectory.append(np.concatenate([state[0] / 10.0, [action_1dim]]))
 
             if i + 1 == max_step_limit or goal_flag == 1:
                 if goal_flag == 1:
@@ -203,16 +223,16 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
                 else:
                     flag = 0
 
-                path = dict2(state = np.concatenate(state_1times),
-                             state_2dim = np.concatenate(states),
-                             state_tra = np.concatenate(states_without_pre),
-                             trajectory = np.concatenate(trajectory),
-                             encodes = np.concatenate(encodes),
-                             actions = np.concatenate(actions),
-                             policies = np.concatenate(policies),
-                             length = length,
-                             logstds = np.concatenate(logstds),
-                             flag = flag
+                path = dict2(state=np.concatenate(state_1times),
+                             state_2dim=np.concatenate(states),
+                             state_tra=np.concatenate(states_without_pre),
+                             trajectory=np.concatenate(trajectory),
+                             encodes=np.concatenate(encodes),
+                             actions=np.concatenate(actions),
+                             policies=np.concatenate(policies),
+                             length=length,
+                             logstds=np.concatenate(logstds),
+                             flag=flag
                              )
                 paths.append(path)
                 break
@@ -220,15 +240,16 @@ def rollout_contin(agent, state_dim, encode_dim, actions_dim,
             # Determine next state (Gridworld specific)
             state = agent.GridMDP.T(state, action)
             if np.argmax(encode) == 0:
-                if (state == np.array([10.0,10.0])).all():
+                if (state == np.array([10.0, 10.0])).all():
                     goal_flag = 1
-                    count_goalagent+=1
+                    count_goalagent += 1
             elif np.argmax(encode) == 1:
-                if (state == np.array([0.0,0.0])).all():
+                if (state == np.array([0.0, 0.0])).all():
                     goal_flag = 1
-                    count_goalagent+=1
+                    count_goalagent += 1
 
     return paths, count_goalagent
+
 
 class LinearBaseline(object):
     """
@@ -242,7 +263,7 @@ class LinearBaseline(object):
         o = o.reshape(o.shape[0], -1)
         l = len(path["rewards"])
         al = np.arange(l).reshape(-1, 1) / 100.0
-        return np.concatenate([o, o**2, al, al**2, np.ones((l, 1))], axis=1)
+        return np.concatenate([o, o ** 2, al, al ** 2, np.ones((l, 1))], axis=1)
 
     def fit(self, paths):
         featmat = np.concatenate([self._features(path) for path in paths])
@@ -255,15 +276,18 @@ class LinearBaseline(object):
 
     def predict(self, path):
         return np.zeros(len(path["rewards"])) if self.coeffs is None else \
-                self._features(path).dot(self.coeffs)
+            self._features(path).dot(self.coeffs)
+
 
 def pathlength(path):
     return len(path["actions"])
 
+
 def explained_variance(ypred, y):
     assert y.ndim == 1 and ypred.ndim == 1
     vary = np.var(y)
-    return np.nan if vary==0 else 1 - np.var(y-ypred)/vary
+    return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
+
 
 class TimeDependentBaseline(object):
     def __init__(self):
@@ -280,7 +304,7 @@ class TimeDependentBaseline(object):
         retmean = retsum / retcount
         self.baseline = retmean
         pred = np.concatenate([self.predict(path) for path in paths])
-        return {"EV" : explained_variance(pred, np.concatenate(rets))}
+        return {"EV": explained_variance(pred, np.concatenate(rets))}
 
     def predict(self, path):
         if self.baseline is None:
@@ -290,18 +314,17 @@ class TimeDependentBaseline(object):
             lenbase = len(self.baseline)
             if lenpath > lenbase:
                 return np.concatenate([self.baseline, self.baseline[-1] +
-                                       np.zeros(lenpath-lenbase)])
+                                       np.zeros(lenpath - lenbase)])
             else:
                 return self.baseline[:lenpath]
 
+
 class NNBaseline(object):
-    def __init__(self, sess, state, encodes, state_dim, encode_dim, lr_baseline,
+    def __init__(self, sess, state_dim, encode_dim, lr_baseline,
                  b_iter, batch_size, dir_path):
         """
         A Neural Network baseline.
         :param sess: tf object for current session
-        :param state: tf object with size of state dim.
-        :param encodes: tf object with size of task var dim.
         :param state_dim: Dimension of state
         :param encode_dim: Dimension of task var
         :param lr_baseline: A linear baseline which is provided by keras backend in config
@@ -309,8 +332,8 @@ class NNBaseline(object):
         :param batch_size: Found in config
         :param dir_path: Path where learnt model should be saved
         """
-        print ("Now we build baseline")
-        self.model = self.create_net(state, encodes, state_dim, encode_dim, lr_baseline)
+        print("Now we build baseline")
+        self.model = self.create_net(state_dim, encode_dim, lr_baseline)
         self.sess = sess
         self.b_iter = b_iter
         self.batch_size = batch_size
@@ -321,20 +344,18 @@ class NNBaseline(object):
         f_read.write("Baseline alpha:\n" + str(self.mixfrac) + "\n")
         f_read.close()
 
-    def create_net(self, state, encodes, state_dim, encode_dim, lr_baseline):
+    def create_net(self, state, encodes, lr_baseline):
         """
         Build NN model for baseline using states
         :param state:
         :param encodes:
-        :param state_dim:
-        :param encode_dim:
         :param lr_baseline:
         :return:
         """
         # TODO: pyTorch
         K.set_learning_phase(1)
 
-        states = Input(tensor = state)
+        states = Input(tensor=state)
         x = Dense(128)(states)
         x = LeakyReLU()(x)
         encodes = Input(tensor=encodes)
@@ -344,7 +365,7 @@ class NNBaseline(object):
         h = Dense(32)(h)
         h = LeakyReLU()(h)
         p = Dense(1)(h)
-        
+
         model = Model(input=[state, encodes], output=p)
         adam = Adam(lr=lr_baseline)
         model.compile(loss='mse', optimizer=adam)
@@ -395,7 +416,7 @@ class NNBaseline(object):
                 start = (start + batch_size) % num_train
             val_loss = np.average(np.square(self.model.predict(
                 [state_val, encodes_val]).flatten() - returns_val))
-            if i == b_iter-1:
+            if i == b_iter - 1:
                 b_loss = val_loss
         return b_loss
 
@@ -410,7 +431,7 @@ class NNBaseline(object):
         else:
             ret = self.model.predict(
                 [path["state"], path["encodes"]])
-        return np.reshape(ret, (ret.shape[0], ))
+        return np.reshape(ret, (ret.shape[0],))
 
 
 class GetFlat(object):
@@ -447,7 +468,7 @@ def linesearch(f, x, fullstep, expected_improve_rate):
     accept_ratio = .1
     max_backtracks = 10
     fval = f(x)
-    for (_n_backtracks, stepfrac) in enumerate(.5**np.arange(max_backtracks)):
+    for (_n_backtracks, stepfrac) in enumerate(.5 ** np.arange(max_backtracks)):
         xnew = x + stepfrac * fullstep
         newfval = f(xnew)
         actual_improve = fval - newfval
@@ -456,6 +477,7 @@ def linesearch(f, x, fullstep, expected_improve_rate):
         if ratio > accept_ratio and actual_improve > 0:
             return xnew
     return x
+
 
 def conjugate_gradient(f_Ax, b, cg_iters=10, residual_tol=1e-10):
     p = b.copy()
@@ -486,6 +508,7 @@ class ReplayBuffer(object):
     """
     Represents a buffer for storing previous trajectories
     """
+
     def __init__(self, buffer_size):
         self.buffer_size = buffer_size
         self.num_paths = 0

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
-from utils import *
+import torch as torch
+from torch import nn
+from torch.autograd import Variable
+from utils_pyTorch import *
 import numpy as np
 import time
 import math
@@ -17,6 +20,7 @@ import keras.backend as K
 import json
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -26,65 +30,66 @@ import gridworld
 
 import os
 import sys
+
 sys.setrecursionlimit(10000)
 from datetime import datetime
 
-#import pyclustering
-#from pyclustering.cluster import xmeans
+# import pyclustering
+# from pyclustering.cluster import xmeans
 
 # Configuration of hyperparams
 parser = argparse.ArgumentParser(description="TRPO")
-parser.add_argument("--paths_per_collect", type=int, default=10)       # Number of trajectory (20)
-parser.add_argument("--max_step_limit", type=int, default=25)          # Max step per episode
-parser.add_argument("--min_step_limit", type=int, default=0)           # Min step per episode            
-parser.add_argument("--n_iter", type=int, default=7)                 # Epoch (300)
-parser.add_argument("--gamma", type=float, default=.95)                # Discount factor (MDP)
-parser.add_argument("--lam", type=float, default=.97)                  # Lamda (TRPO)
-parser.add_argument("--max_kl", type=float, default=0.01)              # Max of KL-divergence
-parser.add_argument("--cg_damping", type=float, default=0.1)           # Damping (TRPO)
-parser.add_argument("--lr_discriminator", type=float, default=1e-4)    # Learning rate of Discriminator
-parser.add_argument("--lr_baseline", type=float, default=1e-4)         # Learning rate of Baseline
-parser.add_argument("--b_iter", type=int, default=1)                   # Inner loop of Baseline
-parser.add_argument("--buffer_size", type=int, default=60)             # Size of Replaybuffer 
-parser.add_argument("--sample_size", type=int, default=60)             # Sample size (if batch learning, buffer size = sample size)
-parser.add_argument("--batch_size", type=int, default=256)             # Batch size for network update (samplesize * trajectory length)
-parser.add_argument("--inner_loop", type=int, default=100)             # Inner loop
-parser.add_argument("--seed", type=int, default=1024)                  # Seed
-parser.add_argument("--schedule", type=int, default=0)                 # Beta scheduling
-parser.add_argument("--beta", type=float, default=.9)                  # Beta
-parser.add_argument("--w", type=float, default=0)                      # Scheduling weight of beta
+parser.add_argument("--paths_per_collect", type=int, default=10)  # Number of trajectory (20)
+parser.add_argument("--max_step_limit", type=int, default=25)  # Max step per episode
+parser.add_argument("--min_step_limit", type=int, default=0)  # Min step per episode
+parser.add_argument("--n_iter", type=int, default=7)  # Epoch (300)
+parser.add_argument("--gamma", type=float, default=.95)  # Discount factor (MDP)
+parser.add_argument("--lam", type=float, default=.97)  # Lamda (TRPO)
+parser.add_argument("--max_kl", type=float, default=0.01)  # Max of KL-divergence
+parser.add_argument("--cg_damping", type=float, default=0.1)  # Damping (TRPO)
+parser.add_argument("--lr_discriminator", type=float, default=1e-4)  # Learning rate of Discriminator
+parser.add_argument("--lr_baseline", type=float, default=1e-4)  # Learning rate of Baseline
+parser.add_argument("--b_iter", type=int, default=1)  # Inner loop of Baseline
+parser.add_argument("--buffer_size", type=int, default=60)  # Size of Replaybuffer
+parser.add_argument("--sample_size", type=int, default=60)  # Sample size (if batch learning, buffer size = sample size)
+parser.add_argument("--batch_size", type=int, default=256)  # Batch size for network update (samplesize * trajectory length)
+parser.add_argument("--inner_loop", type=int, default=50)  # Inner loop (100)
+parser.add_argument("--seed", type=int, default=1024)  # Seed
+parser.add_argument("--schedule", type=int, default=0)  # Beta scheduling
+parser.add_argument("--beta", type=float, default=.9)  # Beta
+parser.add_argument("--w", type=float, default=0)  # Scheduling weight of beta
 
 args = parser.parse_args()
+
 
 class TRPOAgent(object):
     """
     Represents the learning agent with its D and G nets and TRPO procedure
     """
     # Configuration of the agent containing all the hyperparams
-    config = dict2(paths_per_collect = args.paths_per_collect,
-                   max_step_limit = args.max_step_limit,
-                   min_step_limit = args.min_step_limit,
-                   n_iter = args.n_iter,
-                   gamma = args.gamma,
-                   lam = args.lam,
-                   max_kl = args.max_kl,
-                   cg_damping = args.cg_damping,
-                   lr_discriminator = args.lr_discriminator,
-                   lr_baseline = args.lr_baseline,
-                   b_iter = args.b_iter,
-                   buffer_size = args.buffer_size,
-                   sample_size = args.sample_size,
-                   batch_size = args.batch_size,
-                   seed = args.seed,
-                   schedule = args.schedule,
-                   beta = args.beta,
-                   w = args.w,
-                   inner_loop = args.inner_loop)
+    config = dict2(paths_per_collect=args.paths_per_collect,
+                   max_step_limit=args.max_step_limit,
+                   min_step_limit=args.min_step_limit,
+                   n_iter=args.n_iter,
+                   gamma=args.gamma,
+                   lam=args.lam,
+                   max_kl=args.max_kl,
+                   cg_damping=args.cg_damping,
+                   lr_discriminator=args.lr_discriminator,
+                   lr_baseline=args.lr_baseline,
+                   b_iter=args.b_iter,
+                   buffer_size=args.buffer_size,
+                   sample_size=args.sample_size,
+                   batch_size=args.batch_size,
+                   seed=args.seed,
+                   schedule=args.schedule,
+                   beta=args.beta,
+                   w=args.w,
+                   inner_loop=args.inner_loop)
 
-    def __init__(self, sess, state_dim, encode_dim, action_dim, filepath):
+    def __init__(self, state_dim, encode_dim, action_dim, filepath):
         """
         Initialize
-        @param sess: tf session
         @param state_dim: dimension of state space
         @param encode_dim: See paper. Used for task var.
         @param action_dim: dimension of action space
@@ -95,36 +100,28 @@ class TRPOAgent(object):
         self.seed = seed_initialize(filepath, self.config.seed)
         print(self.seed)
 
-        # TODO: Change following lines according to pyTorch notation.
         # Set variables from constructor
-        self.sess = sess
         self.buffer = ReplayBuffer(self.config.buffer_size)
         self.buffer_new = ReplayBuffer(self.config.buffer_size)
         self.state_dim = state_dim
         self.encode_dim = encode_dim
         self.action_dim = action_dim
 
-        # Some important vars for tensorflow
-        self.state = state = tf.placeholder(dtype, shape=[None, state_dim])
-        self.state_5times = state_5times = tf.placeholder(dtype, shape=[None, state_dim*5])
-        self.encodes = encodes = tf.placeholder(dtype, shape=[None, encode_dim])
-        self.actions = actions = tf.placeholder(dtype, shape=[None, action_dim])
-        self.policy = policy = tf.placeholder(dtype, shape=[None, action_dim])
+        # TODO: Change following lines according to pyTorch notation.
+        # Some important vars
+        self.policy = policy = action_dim
+        self.advants = advants = Variable()  # torch.zeros(None)
+        self.oldaction_dist_mu = oldaction_dist_mu = Variable()  # torch.zeros(None, action_dim)
+        self.oldaction_dist_logstd = oldaction_dist_logstd = Variable()  # torch.zeros(None, action_dim)
 
-        self.advants = advants = tf.placeholder(dtype, shape=[None])
-        self.oldaction_dist_mu = oldaction_dist_mu = \
-                tf.placeholder(dtype, shape=[None, action_dim])
-        self.oldaction_dist_logstd = oldaction_dist_logstd = \
-                tf.placeholder(dtype, shape=[None, action_dim])
-
-        self.noise = noise = tf.placeholder(dtype, shape=[None, action_dim])
-        self.beta = beta = tf.placeholder(dtype, shape=[None, 1])
+        self.noise = noise = Variable()  # [None, action_dim]
+        self.beta = beta = Variable()  # [None, 1])
 
         # Create D and G
-        print ("Now we build trpo generator")
-        self.generator = self.create_generator(state, encodes, action_dim) #TODO
-        print ("Now we build discriminator")
-        self.discriminator = self.create_discriminator(state, actions, noise, encodes, policy) #TODO
+        print("Now we build trpo generator")
+        self.generator = self.create_generator(state_dim, encode_dim, action_dim)  # TODO
+        print("Now we build discriminator")
+        self.discriminator = self.create_discriminator(state_dim, action_dim, noise, encode_dim, policy)  # TODO
 
         # Looks like important vars used during training like log probs and gradients
         self.demo_idx = 0
@@ -136,14 +133,14 @@ class TRPOAgent(object):
         eps = 1e-8
         self.action_dist_mu = action_dist_mu
         self.action_dist_logstd = action_dist_logstd
-        N = tf.shape(state)[0]
-        log_p_n = gauss_log_prob(action_dist_mu, action_dist_logstd, actions)
-        log_oldp_n = gauss_log_prob(oldaction_dist_mu, oldaction_dist_logstd, actions)
+        N = tf.shape(state_dim)[0]
+        log_p_n = gauss_log_prob(action_dist_mu, action_dist_logstd, action_dim)
+        log_oldp_n = gauss_log_prob(oldaction_dist_mu, oldaction_dist_logstd, action_dim)
 
         ratio_n = tf.exp(log_p_n - log_oldp_n)
         Nf = tf.cast(N, dtype)
         surr = -tf.reduce_mean(ratio_n * advants)
-        var_list = self.generator.trainable_weights # Save weights of G
+        var_list = self.generator.trainable_weights  # Save weights of G
 
         kl = gauss_KL(oldaction_dist_mu, oldaction_dist_logstd,
                       action_dist_mu, action_dist_logstd) / Nf
@@ -168,24 +165,24 @@ class TRPOAgent(object):
         self.gf = GetFlat(self.sess, var_list)
         self.sff = SetFromFlat(self.sess, var_list)
         # Create NN baseline based on expert demos for predicting actions. Will be used for training the Generator.
-        self.baseline = NNBaseline(sess, state, encodes, state_dim, encode_dim,
+        self.baseline = NNBaseline(state_dim, encode_dim,
                                    self.config.lr_baseline, self.config.b_iter,
                                    self.config.batch_size, self.dir_path)
-        self.sess.run(tf.global_variables_initializer())
+        # self.sess.run(tf.global_variables_initializer()) # TODO: What is this?
         # TODO End
 
         # Create a grid object to store the values
         self.GridMDP = gridworld.GridMDP([[0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [None, None, None, 0, 0, 0, 0, 0, None, None, None],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0]], terminals=[(1.0, 1.0)])
+                                          [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [None, None, None, 0, 0, 0, 0, 0, None, None, None],
+                                          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0],
+                                          [0, 0, 0, 0, 0, None, 0, 0, 0, 0, 0]], terminals=[(1.0, 1.0)])
 
     def create_generator(self, state, encodes, action_dim):
         """
@@ -195,20 +192,47 @@ class TRPOAgent(object):
         @param action_dim: dimension of action
         @return: The newly built model
         """
-        # TODO: Change following lines into pyTorch notation
-        K.set_learning_phase(1)
 
-        states = Input(tensor=state)
-        encodes = Input(tensor=encodes)
-        h = merge([states, encodes], mode='concat')
-        h = Dense(128)(h)
-        h = LeakyReLU()(h)
-        h = Dense(128)(h)
-        h = LeakyReLU()(h)
+        # TODO: Debug
+        class G(nn.Module):
+            def __init__(self, s, e, a):
+                """
+                :param s: State dim
+                :param e: Encode dim
+                :param a: Action dim
+                """
+                super(G, self).__init__()
+                self.inp = nn.Linear(s + e, 128)
+                self.h1 = nn.Linear(128, 128)
+                self.h2 = nn.Linear(128, 128)
 
-        actions = Dense(action_dim, activation='softmax')(h)
-        model = Model(input=[state, encodes], output=actions)
-        return model
+                self.action_mean = nn.Linear(128, a)
+                self.action_mean.weight.data.mul_(0.1)
+                self.action_mean.bias.data.mul_(0.0)
+
+                self.action_log_std = nn.Parameter(torch.zeros(1, a))
+
+                self.saved_actions = []
+                self.rewards = []
+                self.final_value = 0
+
+            def forward(self, x):
+                """
+                Forward computation
+                :param x: Input val
+                :return: Action mean, log_std and std
+                """
+                x = lru(self.inp(x))
+                x = lru(self.h1(x))
+                x = lru(self.h2(x))
+
+                action_mean = self.action_mean(x)
+                action_log_std = self.action_log_std.expand_as(action_mean)
+                action_std = torch.exp(action_log_std)
+
+                return action_mean, action_log_std, action_std
+
+        return G(state, encodes, action_dim)
 
     def create_discriminator(self, state, action, noise, encode, policy):
         """
@@ -220,36 +244,57 @@ class TRPOAgent(object):
         @param policy: A tf placeholder. Will contain the policy (action vector)
         @return: Newly built tf model
         """
-        # TODO: Change following lines into pyTorch notation
-        states = Input(tensor=state)
-        actions = Input(tensor=action)
-        noises = Input(tensor=noise)
-        encodes = Input(tensor=encode)
-        policies = Input(tensor=policy)
-        actions = merge([actions, noises], mode='sum')
-        h = merge([states, actions, encodes], mode='concat')
-        h = Dense(128)(h)
-        h = LeakyReLU()(h)
-        h = Dense(128)(h)
-        h = LeakyReLU()(h)
-        p = Dense(1)(h)
-        p = LeakyReLU()(p)
 
-        policies = Input(tensor=policy)
-        
-        p_exp = Lambda(lambda x: K.exp(x))(p)
+        # TODO: Debug
+        class D(nn.Module):
+            def __init__(self, s, e, a, n, p):
+                """
+                :param s: State dim
+                :param e: Encode dim
+                :param a: Action dim
+                :param n: Noise dim
+                :param p: Policy dim
+                """
+                super(D, self).__init__()
+                self.inp = nn.Linear(s + a + n + e, 128)
+                self.h1 = nn.Linear(128, 128)
+                self.h2 = nn.Linear(128, 128)
+                self.h3 = nn.Linear(128, 1)
+                self.p = p
 
-        policies_max = Lambda(lambda x: K.max(x, axis=1, keepdims=True))(policies)
-        p_and_actions = merge([p_exp, policies_max], mode='sum')
+                self.action_mean = nn.Linear(1, a)
+                self.action_mean.weight.data.mul_(0.1)
+                self.action_mean.bias.data.mul_(0.0)
 
-        p_reward = merge([p_exp, p_and_actions], mode=lambda p_reward: p_reward[0]/p_reward[1], output_shape=(1, ))
+                self.action_log_std = nn.Parameter(torch.zeros(1, a))
 
-        model = Model(input=[state, action, noise, encode, policy], output=p_reward)
-        adam = Adam(lr=self.config.lr_discriminator)
-        model.compile(
-            loss = 'binary_crossentropy', optimizer=adam
-        )
-        return model
+                self.saved_actions = []
+                self.rewards = []
+                self.final_value = 0
+
+            def forward(self, xin):
+                """
+                Forward computation. See S-GAIL paper for details.
+                :param xin: Input val (action-state-encode + policy)
+                :return: Action mean, log_std and std
+                """
+                p_start = len(xin) - 1 - self.p
+                x = xin[:p_start]
+                x = lru(self.inp(x))
+                x = lru(self.h1(x))
+                x = lru(self.h2(x))
+                x = lru(self.h3(x))
+                x = Lambda(lambda y: np.exp(y))(x)
+                max_pin = np.max(xin[p_start:], axis=1, keepdims=True)
+                out = Lambda(lambda p_reward: p_reward[0] / p_reward[1], output_shape=(1,))(np.concatenate((x, max_pin), 0))
+
+                action_mean = self.action_mean(out)
+                action_log_std = self.action_log_std.expand_as(action_mean)
+                action_std = torch.exp(action_log_std)
+
+                return action_mean, action_log_std, action_std
+
+        return D(state, action, noise, encode, policy)
 
     #
     # Action select
@@ -264,17 +309,17 @@ class TRPOAgent(object):
         @return: Sampled action and policy containing zeros + action
         """
         action_dist_mu = \
-                self.sess.run(
-                    self.action_dist_mu,
-                    {self.state: state, self.encodes: encodes}
-                )
+            self.sess.run(
+                self.action_dist_mu,
+                {self.state_dim: state, self.encode_dim: encodes}
+            )
 
         act = copy.copy(action_dist_mu)
         policy = copy.copy(action_dist_mu)
         policy = policy * 0
 
         flag = 0
-        while(flag == 0):
+        while (flag == 0):
             random_action = random.random()
             if random_action < 1:
                 flag = 1
@@ -291,9 +336,9 @@ class TRPOAgent(object):
 
         for actor in range(len(act[0])):
             if actor == action_dir:
-                act[0,actor] += 1.0
+                act[0, actor] += 1.0
             else:
-                act[0,actor] -= 1.0
+                act[0, actor] -= 1.0
 
         act[:, 0] = np.clip(act[:, 0], 0, 1)
         act[:, 1] = np.clip(act[:, 1], 0, 1)
@@ -312,10 +357,10 @@ class TRPOAgent(object):
             encodes = np.zeros((1, self.encode_dim), dtype=np.float32)
             encodes[0, i] = 1
             softmax_policy = \
-                    self.sess.run(
-                        self.action_dist_mu,
-                        {self.state: state, self.encodes: encodes}
-                    )
+                self.sess.run(
+                    self.action_dist_mu,
+                    {self.state_dim: state, self.encode_dim: encodes}
+                )
             policy[argmax_action] += softmax_policy[0][argmax_action] / self.encode_dim
         return policy
 
@@ -333,14 +378,14 @@ class TRPOAgent(object):
         # TODO: Session again
         # Sample action for each state based on current policy
         softmax_policy = \
-                self.sess.run(
-                    self.action_dist_mu,
-                    {self.state: state, self.encodes: encodes}
-                )
+            self.sess.run(
+                self.action_dist_mu,
+                {self.state_dim: state, self.encode_dim: encodes}
+            )
 
         policy[argmax_action] = softmax_policy[0][argmax_action]
-        
-        return policy        
+
+        return policy
 
     def learn(self, state_expert, action_expert, new_dir_path):
         """
@@ -379,13 +424,13 @@ class TRPOAgent(object):
 
         f_read.close()
 
-        np.random.seed(self.seed)        
+        np.random.seed(self.seed)
         config = self.config
         start_time = time.time()
         numeptotal = 0
         start_epoch = 0
         progress = 0
-        Omax = self.config.sample_size ## Sample size
+        Omax = self.config.sample_size  ## Sample size
 
         state_d = state_expert
         actions_d = action_expert
@@ -410,7 +455,7 @@ class TRPOAgent(object):
         #
         # Learning part
         #
-        for i in range(start_epoch, start_epoch+config.n_iter): # Learning start
+        for i in range(start_epoch, start_epoch + config.n_iter):  # Learning start
             progress += 1
 
             #
@@ -419,7 +464,7 @@ class TRPOAgent(object):
             demo_dir = "Expert/"
             encodes_d = np.load(demo_dir + "encode_5.npy")
 
-            encode_labels = [(0,1) for num_expert in range(30)]
+            encode_labels = [(0, 1) for num_expert in range(30)]
             encode_labels = list(np.array(encode_labels).flatten())
 
             #
@@ -437,10 +482,10 @@ class TRPOAgent(object):
                 Omax_sample,
                 count_goalagent,
                 i,
-                )
+            )
             latent_labels = [r for r in range(self.encode_dim)]
             sub_labels = []
-            for r in range(int(Omax_sample/self.encode_dim)):
+            for r in range(int(Omax_sample / self.encode_dim)):
                 sub_labels.extend(latent_labels)
 
             count_goalagent_stack.append(count_goalagent)
@@ -452,7 +497,7 @@ class TRPOAgent(object):
 
             for path in rollouts:
                 path["labels"] = [sub_labels[index_for_labels]]
-                index_for_labels +=1
+                index_for_labels += 1
 
             for path in rollouts:
                 self.buffer.add(path)
@@ -463,7 +508,7 @@ class TRPOAgent(object):
             # Sorting trajecotries
             #
             logstds_n = np.concatenate([path["logstds"] for path in paths])
-            state_n = np.concatenate([path["state"] for path in paths]) 
+            state_n = np.concatenate([path["state"] for path in paths])
             encodes_n = np.concatenate([path["encodes"] for path in paths])
             actions_n = np.concatenate([path["actions"] for path in paths])
             labels_n = np.concatenate([path["labels"] for path in paths])
@@ -488,10 +533,10 @@ class TRPOAgent(object):
             # Save the trajectory for visualize
             #
             path_idx = 0
-            start_w = 0 
+            start_w = 0
             for path in paths:
 
-                noise = np.zeros((path["length"], self.action_dim),dtype=np.float16)
+                noise = np.zeros((path["length"], self.action_dim), dtype=np.float16)
                 file_path_world = new_dir_path + "/Generator_trajectories"
 
                 if not os.path.exists(file_path_world):
@@ -518,15 +563,15 @@ class TRPOAgent(object):
                 new_labels = encode_labels
                 if not os.path.exists(new_dir_path + "/new_labels"):
                     os.mkdir(new_dir_path + "/new_labels")
-                np.save(new_dir_path + "/new_labels/iter_%d_labels.npy" %(i), np.array(new_labels))
+                np.save(new_dir_path + "/new_labels/iter_%d_labels.npy" % (i), np.array(new_labels))
 
             for iiter in range(self.config.inner_loop):
                 if iiter % 10 == 0:
                     print("Inner: ", iiter)
                 if iiter % 50 == 0:
                     print(new_dir_path)
-                
-                count_goalagent_new =0
+
+                count_goalagent_new = 0
 
                 #
                 # Create trajectory
@@ -542,17 +587,17 @@ class TRPOAgent(object):
                     Omax,
                     count_goalagent_new,
                     i,
-                    encode_list = new_labels
-                    )
+                    encode_list=new_labels
+                )
                 print("GOAL: ", count_goalagent_new)
 
-                if iiter == self.config.inner_loop -1:
+                if iiter == self.config.inner_loop - 1:
                     count_goalagent_new_stack.append(count_goalagent_new)
 
                 index_for_labels = 0
                 for path in rollouts_new:
                     path["labels"] = [new_labels[index_for_labels]]
-                    index_for_labels +=1
+                    index_for_labels += 1
 
                 #
                 # Pool trajectory (for buffer_new)
@@ -565,13 +610,13 @@ class TRPOAgent(object):
                 #
                 # For TRPO (Single path)
                 #
-                #print ("Calculating actions ...")
+                # print ("Calculating actions ...")
                 # TODO: Deal with tf session (What does run do?)
                 for path in paths_new:
                     path["mus"] = self.sess.run(
                         self.action_dist_mu,
-                        {self.state: path["state"],
-                         self.encodes: path["encodes"]}
+                        {self.state_dim: path["state"],
+                         self.encode_dim: path["encodes"]}
                     )
 
                 #
@@ -579,7 +624,7 @@ class TRPOAgent(object):
                 #
                 mus_new_n = np.concatenate([path["mus"] for path in paths_new])
                 logstds_new_n = np.concatenate([path["logstds"] for path in paths_new])
-                state_new_n = np.concatenate([path["state"] for path in paths_new]) 
+                state_new_n = np.concatenate([path["state"] for path in paths_new])
                 encodes_new_n = np.concatenate([path["encodes"] for path in paths_new])
                 actions_new_n = np.concatenate([path["actions"] for path in paths_new])
                 labels_new_n = np.concatenate([path["labels"] for path in paths_new])
@@ -605,8 +650,8 @@ class TRPOAgent(object):
                 batch_size_agent = len(state_new_n)
                 batch_size_expert = len(state_d)
 
-                #noise_expert = np.random.normal(0, 0.2, (batch_size_expert, self.action_dim))
-                #noise_agent = np.random.normal(0, 0.2, (batch_size_agent, self.action_dim))
+                # noise_expert = np.random.normal(0, 0.2, (batch_size_expert, self.action_dim))
+                # noise_agent = np.random.normal(0, 0.2, (batch_size_agent, self.action_dim))
                 noise_expert = np.zeros((batch_size_expert, self.action_dim), dtype=np.float16)
                 noise_agent = np.zeros((batch_size_agent, self.action_dim), dtype=np.float16)
 
@@ -626,7 +671,7 @@ class TRPOAgent(object):
                     np.zeros(batch_size_agent))
                 loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-                #print self.discriminator.summary()
+                # print self.discriminator.summary()
                 for l in self.discriminator.layers:
                     weights = l.get_weights()
                     l.set_weights(weights)
@@ -660,20 +705,20 @@ class TRPOAgent(object):
                     else:
                         beta = self.config.beta
 
-                    output_d_for_reward = (np.log(output_d + 1e-10) - np.log(anti)).flatten()\
+                    output_d_for_reward = (np.log(output_d + 1e-10) - np.log(anti)).flatten() \
                                           + beta * np.log(np.max(path["policies"], axis=1) + 1e-10).flatten()
 
                     path["rewards"] = output_d_for_reward.flatten()
 
                     path_baselines = np.append(path["baselines"], 0 if
-                                               path["flag"] == 1 else
-                                               path["baselines"][-1])
+                    path["flag"] == 1 else
+                    path["baselines"][-1])
 
-                    deltas = path["rewards"] + config.gamma * path_baselines[1:] -\
-                            path_baselines[:-1]
+                    deltas = path["rewards"] + config.gamma * path_baselines[1:] - \
+                             path_baselines[:-1]
 
-                    #path["returns"] = discount(path["rewards"], config.gamma)
-                    #path["advants"] = path["returns"] - path["baselines"]
+                    # path["returns"] = discount(path["rewards"], config.gamma)
+                    # path["advants"] = path["returns"] - path["baselines"]
                     path["advants"] = discount(deltas, config.gamma * config.lam)
                     path["returns"] = discount(path["rewards"], config.gamma)
 
@@ -707,7 +752,6 @@ class TRPOAgent(object):
                 advants_new_n /= (advants_new_n.std() + 1e-8)
 
                 if iiter == self.config.inner_loop - 1:
-
                     #
                     # Calcurate Generator's reward(sum)
                     #
@@ -729,9 +773,9 @@ class TRPOAgent(object):
                 # Update Generator's parametor using TRPO
                 # TODO: pyTorch implementation
                 #
-                feed = {self.state: state_new_n,
-                        self.encodes: encodes_new_n,
-                        self.actions: actions_new_n,
+                feed = {self.state_dim: state_new_n,
+                        self.encode_dim: encodes_new_n,
+                        self.action_dim: actions_new_n,
                         self.advants: advants_new_n,
                         self.action_dist_logstd: logstds_new_n,
                         self.oldaction_dist_mu: mus_new_n,
@@ -747,7 +791,7 @@ class TRPOAgent(object):
                 stepdir = conjugate_gradient(fisher_vector_product, -g)
                 shs = .5 * stepdir.dot(fisher_vector_product(stepdir))
                 if shs <= 0:
-                    break 
+                    break
 
                 lm = np.sqrt(shs / config.max_kl)
                 fullstep = stepdir / lm
@@ -806,7 +850,6 @@ class TRPOAgent(object):
 
             outfile.close()
 
-
             #
             # Save for loss data
             #
@@ -820,22 +863,20 @@ class TRPOAgent(object):
             #
             losses_A = np.array(losses)
             generator_loss_A = np.array(generator_loss)
-            np.save(file_results+ "reward_Generator.npy", generator_loss_A)
-            np.save(file_results+ "loss_Discriminator.npy", losses_A)
+            np.save(file_results + "reward_Generator.npy", generator_loss_A)
+            np.save(file_results + "loss_Discriminator.npy", losses_A)
 
             #
             # Learning rate of Baseline
             #
             baseline_loss_A = np.array(baseline_loss)
-            np.save(file_results+ "baseline_loss.npy", baseline_loss_A)
-            
+            np.save(file_results + "baseline_loss.npy", baseline_loss_A)
+
             #
             # Number of goal agent
             #
             goal_agent_A = np.array(count_goalagent_stack)
-            np.save(file_results+ "number_of_goal_agent.npy", goal_agent_A)
-
-
+            np.save(file_results + "number_of_goal_agent.npy", goal_agent_A)
 
             file_values = new_dir_path + "/value_function"
             if not os.path.exists(file_values):
@@ -860,38 +901,44 @@ class TRPOAgent(object):
         losses = np.array(losses)
         generator_loss = np.array(generator_loss)
         t = np.arange(progress)
-        fig = plt.figure(figsize = (15,15))
-        ax = fig.add_subplot(2,1,1)
-        ax2 = fig.add_subplot(2,1,2)
-        ax.plot(t,losses)
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(2, 1, 1)
+        ax2 = fig.add_subplot(2, 1, 2)
+        ax.plot(t, losses)
         ax.set_title("Discriminator_loss")
-        ax2.plot(t,generator_loss)
+        ax2.plot(t, generator_loss)
         ax2.set_title("Generator_reward")
+        plt.xlabel("Iteration Nr.")
+        plt.ylabel("Loss Value")
         plt.savefig(new_dir_path + '/loss.png')
-        np.save(file_results+ "reward_Generator.npy", generator_loss)
-        np.save(file_results+ "loss_Discriminator.npy", losses)
+        np.save(file_results + "reward_Generator.npy", generator_loss)
+        np.save(file_results + "loss_Discriminator.npy", losses)
 
         #
         # Learning rate of Baseline
         #
         baseline_loss = np.array(baseline_loss)
         t = np.arange(progress)
-        fig = plt.figure(figsize = (15,15))
-        ax = fig.add_subplot(1,1,1)
-        ax.plot(t,baseline_loss)
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(t, baseline_loss)
         ax.set_title("baseline_loss")
+        plt.xlabel("Iteration Nr.")
+        plt.ylabel("Loss Value")
         plt.savefig(new_dir_path + '/baseline_loss.png')
-        np.save(file_results+ "baseline_loss.npy", baseline_loss)
-        
+        np.save(file_results + "baseline_loss.npy", baseline_loss)
+
         #
         # Number of goal agent
         #
         goal_agent = np.array(count_goalagent_stack)
         t = np.arange(progress)
-        fig = plt.figure(figsize = (15,15))
-        ax = fig.add_subplot(1,1,1)
+        fig = plt.figure(figsize=(15, 15))
+        ax = fig.add_subplot(1, 1, 1)
         ax.plot(t, goal_agent)
         ax.set_title("Goal_agent")
+        plt.xlabel("Iteration Nr.")
+        plt.ylabel("Number of Reached Goals")
         plt.savefig(new_dir_path + '/goal_agent.png')
 
         return progress
