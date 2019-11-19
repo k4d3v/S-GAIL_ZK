@@ -16,16 +16,7 @@ import os
 import sys
 sys.setrecursionlimit(10000)
 from datetime import datetime
-
-def min_max(x, axis=None):
-    min = x.min(axis=axis, keepdims=True)
-    max = x.max(axis=axis, keepdims=True)
-    result = (x-min)/(max-min)
-    return result
-
-def norm(x, a_min, a_max):
-    result = np.clip((x-a_min)/(a_max-a_min), 0.0, 1.0)
-    return result
+from utils import *
 
 def playGame(finetune=1):
     """

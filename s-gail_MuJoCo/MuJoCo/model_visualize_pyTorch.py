@@ -25,7 +25,8 @@ from scipy.stats import mvn, norm
 
 import copy
 
-env = gym.make('Reacher-v1')
+#env = gym.make('Reacher-v1')
+env = gym.make('Reacher-v2')
 
 dtype = tf.float32
 
@@ -153,7 +154,7 @@ class TRPOAgent(object):
 
                 act, action, policy = self.act([state], encode)
 
-                observation, reward, done, info = env.step(action)
+                observation, reward, done, info = env.step(action[0])
 
                 if i_episode % 2 == 0:
                     if np.sum(abs(observation[-3:])) <= 0.018 and abs(action[0][0])< 5e-4 and abs(action[0][0])< 5e-4:

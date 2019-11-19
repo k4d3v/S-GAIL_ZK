@@ -14,3 +14,5 @@ This code can experiment in the grid world environment.
 # Command of running
 
 $ python sgail.py [options]
+
+# Start pycharm from console: env BAMF_DESKTOP_FILE_HINT=/var/lib/snapd/desktop/applications/pycharm-community_pycharm-community.desktop /snap/bin/pycharm-community %f
