@@ -35,7 +35,6 @@ def playGame(finetune=1):
     os.mkdir(new_dir_path)
     print("Make directory: " + new_dir_path)
 
-    # Configure tensorflow session and load on keras
     # TODO: Here is where pyTorch work starts
 
     # define the model

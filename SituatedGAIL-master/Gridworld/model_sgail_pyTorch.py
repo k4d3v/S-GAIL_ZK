@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
-import torch as torch
+import torch
 from torch import nn
 from torch.autograd import Variable
 from utils_pyTorch import *
@@ -9,14 +9,6 @@ import time
 import math
 import argparse
 import copy
-from keras.initializations import normal, identity, uniform
-from keras.models import model_from_json
-from keras.models import Sequential, Model
-from keras.layers import Dense, BatchNormalization, Activation, Flatten, Input, merge, Lambda
-from keras.layers.advanced_activations import LeakyReLU
-from keras.optimizers import Adam, RMSprop
-import tensorflow as tf
-import keras.backend as K
 import json
 
 import matplotlib
@@ -114,21 +106,21 @@ class TRPOAgent(object):
         self.oldaction_dist_mu = oldaction_dist_mu = Variable()  # torch.zeros(None, action_dim)
         self.oldaction_dist_logstd = oldaction_dist_logstd = Variable()  # torch.zeros(None, action_dim)
 
-        self.noise = noise = Variable()  # [None, action_dim]
+        self.noise = noise = action_dim  # [None, action_dim]
         self.beta = beta = Variable()  # [None, 1])
 
         # Create D and G
         print("Now we build trpo generator")
         self.generator = self.create_generator(state_dim, encode_dim, action_dim)  # TODO
         print("Now we build discriminator")
-        self.discriminator = self.create_discriminator(state_dim, action_dim, noise, encode_dim, policy)  # TODO
+        self.discriminator = self.create_discriminator(state_dim, encode_dim, action_dim, noise, policy)  # TODO
 
         # Looks like important vars used during training like log probs and gradients
         self.demo_idx = 0
 
         # TODO: Change following lines according to pyTorch notation.
-        action_dist_mu = self.generator.outputs[0]
-        action_dist_logstd = tf.placeholder(dtype, shape=[None, action_dim])
+        action_dist_mu = self.generator.action_mean.bias
+        action_dist_logstd = self.generator.action_log_std
 
         eps = 1e-8
         self.action_dist_mu = action_dist_mu
@@ -192,7 +184,6 @@ class TRPOAgent(object):
         @param action_dim: dimension of action
         @return: The newly built model
         """
-
         # TODO: Debug
         class G(nn.Module):
             def __init__(self, s, e, a):
@@ -210,7 +201,7 @@ class TRPOAgent(object):
                 self.action_mean.weight.data.mul_(0.1)
                 self.action_mean.bias.data.mul_(0.0)
 
-                self.action_log_std = nn.Parameter(torch.zeros(1, a))
+                self.action_log_std = nn.Parameter(torch.zeros(1, a), requires_grad=True)
 
                 self.saved_actions = []
                 self.rewards = []
@@ -234,7 +225,7 @@ class TRPOAgent(object):
 
         return G(state, encodes, action_dim)
 
-    def create_discriminator(self, state, action, noise, encode, policy):
+    def create_discriminator(self, state, encode, action, noise,  policy):
         """
         Creates the discriminator net
         @param state: Dimension of state space
@@ -244,7 +235,6 @@ class TRPOAgent(object):
         @param policy: A tf placeholder. Will contain the policy (action vector)
         @return: Newly built tf model
         """
-
         # TODO: Debug
         class D(nn.Module):
             def __init__(self, s, e, a, n, p):
@@ -266,7 +256,8 @@ class TRPOAgent(object):
                 self.action_mean.weight.data.mul_(0.1)
                 self.action_mean.bias.data.mul_(0.0)
 
-                self.action_log_std = nn.Parameter(torch.zeros(1, a))
+                self.outputs = nn.Parameter(torch.zeros(1, a), requires_grad=True)
+                self.action_log_std = nn.Parameter(torch.zeros(1, a), requires_grad=True)
 
                 self.saved_actions = []
                 self.rewards = []
@@ -294,7 +285,7 @@ class TRPOAgent(object):
 
                 return action_mean, action_log_std, action_std
 
-        return D(state, action, noise, encode, policy)
+        return D(state, encode, action, noise, policy)
 
     #
     # Action select
