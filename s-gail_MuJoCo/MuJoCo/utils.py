@@ -19,9 +19,12 @@ import copy
 
 from datetime import datetime
 import gym
+import pybulletgym
 
 # env = gym.make('Reacher-v1')
-env = gym.make('Reacher-v2')
+#env = gym.make('Reacher-v2')
+#env = gym.make("MinitaurBulletEnv-v0")
+env = gym.make("ReacherPyBulletEnv-v0")
 env.reset()
 
 dtype = tf.float32
