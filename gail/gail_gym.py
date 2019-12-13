@@ -20,6 +20,34 @@ from core.common import estimate_advantages
 from core.agent import Agent
 
 
+def gail_reward(state, action):
+    """
+    Reward based on Discriminator net output as described in GAIL
+    """
+    state_action = tensor(np.hstack([state, action]), dtype=dtype)
+    with torch.no_grad():
+        return math.log(discrim_net(state_action)[0].item())
+
+
+def sgail_reward(state, action, beta):
+    """
+    Reward based on Discriminator and Generator net output as described in SGAIL
+    """
+    state_action = tensor(np.hstack([state, action]), dtype=dtype)
+
+    aa = discrim_net(state_action)[0].item()
+    a = math.log(discrim_net(state_action)[0].item())
+    b = math.log(1 - discrim_net(state_action)[0].item())
+    d = policy_net(state)
+    c = beta * policy_net(state)[0].item()
+
+    with torch.no_grad():
+        return math.log(discrim_net(state_action)[0].item()) \
+               - math.log(1 - discrim_net(state_action)[0].item()) \
+               + beta * math.log(policy_net(state_action[0].item()))
+        # TODO: Compute log(1-D) and beta*log(pi) (Discriminator should have a different output etc.)
+
+
 def update_params(batch):
     states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
     actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
@@ -63,15 +91,21 @@ def update_params(batch):
 
 
 def main_loop():
+    beta = args.beta
+    delta_beta = -args.w
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
-        batch, log = agent.collect_samples(state_min, state_max, action_min, action_max, args.min_batch_size)
+        batch, log = agent.collect_samples(state_min, state_max, action_min, action_max, args.min_batch_size, beta)
         discrim_net.to(device)
 
         t0 = time.time()
         # Update params of V, G, D
         update_params(batch)
+        # Modulate entropy correction param
+        beta += delta_beta
+
+        """Printing and saving"""
         t1 = time.time()
 
         if i_iter % args.log_interval == 0:
@@ -180,18 +214,8 @@ optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_
 optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
-
-def expert_reward(state, action):
-    """
-    Reward based on Discriminator net output
-    """
-    state_action = tensor(np.hstack([state, action]), dtype=dtype)
-    with torch.no_grad():
-        return -math.log(discrim_net(state_action)[0].item())
-
-
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=expert_reward,
+agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 # Finally do the learning

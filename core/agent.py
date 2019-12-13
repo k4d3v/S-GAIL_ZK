@@ -10,7 +10,7 @@ import time
 
 
 def collect_samples(pid, queue, env, policy, custom_reward,
-                    mean_action, render, running_state, min_batch_size, s_min, s_max, a_min, a_max):
+                    mean_action, render, running_state, min_batch_size, s_min, s_max, a_min, a_max, beta):
     """
     Rollout for each thread
     @param pid:
@@ -61,7 +61,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                 next_state = running_state(next_state)
 
             if custom_reward is not None:
-                reward = custom_reward(state, action)
+                reward = custom_reward(state, action, beta)
                 total_c_reward += reward
                 min_c_reward = min(min_c_reward, reward)
                 max_c_reward = max(max_c_reward, reward)
@@ -142,7 +142,7 @@ class Agent:
         self.render = render
         self.num_threads = num_threads
 
-    def collect_samples(self, state_min, state_max, a_min, a_max, min_batch_size):
+    def collect_samples(self, state_min, state_max, a_min, a_max, min_batch_size, beta):
         """
         Parallelized version of rollout. Each worker calls outer fun
         """
@@ -160,7 +160,7 @@ class Agent:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max)
+                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max, beta)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)

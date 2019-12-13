@@ -37,4 +37,9 @@ def prep_parser():
     parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                         help="interval between saving model (default: 0, means don't save)")
     parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
+    # Args for SGAIL: Beta and beta change
+    parser.add_argument("--beta", type=float, default=.9,
+                        help="Entropy correction (default in S-GAIL paper: 0.9)")
+    parser.add_argument("--w", type=float, default=1e-3,
+                        help="Scheduling param for beta (default: 1e-3)")
     return parser.parse_args()
