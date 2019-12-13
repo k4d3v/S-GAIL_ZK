@@ -1,14 +1,30 @@
 import multiprocessing
+
+import copy
+
 from utils.replay_memory import Memory
+from utils.math import delete, norm_act
 from utils.torch import *
 import math
 import time
 
 
 def collect_samples(pid, queue, env, policy, custom_reward,
-                    mean_action, render, running_state, min_batch_size):
+                    mean_action, render, running_state, min_batch_size, s_min, s_max, a_min, a_max):
     """
-    Rollout of agent
+    Rollout for each thread
+    @param pid:
+    @param queue:
+    @param env:
+    @param policy:
+    @param custom_reward:
+    @param mean_action:
+    @param render:
+    @param running_state: ZFilter
+    @param min_batch_size:
+    @param s_min: For state reduction
+    @param s_max: For state reduction
+    @return:
     """
     torch.randn(pid)
     log = dict()
@@ -23,7 +39,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     num_episodes = 0
 
     while num_steps < min_batch_size:
-        state = env.reset()
+        obs = env.reset()
+        state = delete(copy.copy(obs), s_min, s_max) if s_min is not None else obs
         if running_state is not None:
             state = running_state(state)
         reward_episode = 0
@@ -35,8 +52,10 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                     action = policy(state_var)[0][0].numpy()
                 else:
                     action = policy.select_action(state_var)[0].numpy()
-            action = int(action) if policy.is_disc_action else action.astype(np.float64)
-            next_state, reward, done, _ = env.step(action)
+            aaction = int(action) if policy.is_disc_action else action.astype(np.float64)
+            action = norm_act(aaction, a_min, a_max) if a_min is not None else aaction
+            obs, reward, done, _ = env.step(action)
+            next_state = delete(copy.copy(obs), s_min, s_max) if s_min is not None else obs
             reward_episode += reward
             if running_state is not None:
                 next_state = running_state(next_state)
@@ -104,6 +123,16 @@ class Agent:
 
     def __init__(self, env, policy, device, custom_reward=None,
                  mean_action=False, render=False, running_state=None, num_threads=1):
+        """
+        @param env:
+        @param policy:
+        @param device:
+        @param custom_reward:
+        @param mean_action:
+        @param render:
+        @param running_state:
+        @param num_threads: More than one means parallel execution when collecting samples
+        """
         self.env = env
         self.policy = policy
         self.device = device
@@ -113,7 +142,7 @@ class Agent:
         self.render = render
         self.num_threads = num_threads
 
-    def collect_samples(self, min_batch_size):
+    def collect_samples(self, state_min, state_max, a_min, a_max, min_batch_size):
         """
         Parallelized version of rollout. Each worker calls outer fun
         """
@@ -131,7 +160,7 @@ class Agent:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, thread_batch_size)
+                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)

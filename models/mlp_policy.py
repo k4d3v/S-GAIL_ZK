@@ -5,6 +5,13 @@ from utils.math import *
 
 class Policy(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_size=(128, 128), activation='tanh', log_std=0):
+        """
+        @param state_dim:
+        @param action_dim:
+        @param hidden_size: Shape of hidden layers (Paper: 2x128)
+        @param activation: Activation fun for output
+        @param log_std: Initial log-std for policy; See parser arguments
+        """
         super().__init__()
         self.is_disc_action = False
         if activation == 'tanh':

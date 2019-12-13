@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import gym
 import os
 import sys
@@ -64,7 +66,7 @@ def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
-        batch, log = agent.collect_samples(args.min_batch_size)
+        batch, log = agent.collect_samples(state_min, state_max, action_min, action_max, args.min_batch_size)
         discrim_net.to(device)
 
         t0 = time.time()
@@ -90,7 +92,7 @@ def main_loop():
 # Prepare hyperparams
 args = prep_parser()
 
-# Prepare torch
+"""Prepare torch"""
 dtype = torch.float64
 torch.set_default_dtype(dtype)
 device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available() else torch.device('cpu')
@@ -99,16 +101,60 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
-state_dim = env.observation_space.shape[0]
-is_disc_action = len(env.action_space.shape) == 0
-action_dim = 1 if is_disc_action else env.action_space.shape[0]
-running_state = ZFilter((state_dim,), clip=5)
-# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """seeding"""
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 env.seed(args.seed)
+
+"""Directory of demos; state and action dim"""
+# TODO: Parser args
+demo_dir = "../Expert/"
+param_dir = "../params_MuJoCo/"
+
+atime = datetime.now()
+new_dir_path = "../log_mujoco/%d-%d %d:%d" % (atime.month, atime.day, atime.hour, atime.minute)
+os.mkdir(new_dir_path)
+print("Make directory: " + new_dir_path)
+
+"""Load expert trajs and encode labels"""
+# State and action dim + filter
+# TODO: Why different?
+if args.env_name == "Reacher-v2":
+    # Labels
+    encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class to has index 6392
+
+    # States
+    state_expert = np.load(demo_dir + "state_mujoco.npy")[:6392]
+    action_expert = np.load(demo_dir + "action_mujoco.npy")[:6392]
+
+    # Normalize & Get Min-Max
+    state_expert_norm = min_max(state_expert, axis=0)
+    action_expert_norm = min_max(action_expert, axis=0)
+
+    state_dim = state_expert_norm.shape[1]
+    is_disc_action = len(env.action_space.shape) == 0
+    action_dim = env.action_space.shape[0]
+    running_state = ZFilter((state_dim,), clip=5)
+
+    # Combine state and actions into one array
+    expert_traj = np.concatenate((state_expert_norm, action_expert_norm), axis=1)
+
+    state_max = np.max(state_expert, axis=0)
+    state_min = np.min(state_expert, axis=0)
+    action_max = np.max(action_expert, axis=0)  # = [0.2112, 0.3219]
+    action_min = np.min(action_expert, axis=0)  # = [-0.1343, -0.0819]
+
+# load trajectory from expert
+# TODO: Is running state needed?
+else:
+    state_dim = env.observation_space.shape[0]
+    is_disc_action = len(env.action_space.shape) == 0
+    action_dim = 1 if is_disc_action else env.action_space.shape[0]
+    expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
+    # running_reward = ZFilter((1,), demean=False, clip=10)
+
+    state_max, state_min, action_max, action_min = None, None, None, None
 
 """define actor and critic"""
 # Policy = Generator
@@ -131,11 +177,8 @@ optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate
 optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_rate)
 
 # optimization epoch number and batch size for PPO
-optim_epochs = 3  # 10
-optim_batch_size = 32  # 64
-
-# load trajectory
-expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
+optim_epochs = 10  # 10
+optim_batch_size = 64  # 64
 
 
 def expert_reward(state, action):
