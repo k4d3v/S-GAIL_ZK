@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: roboschool
+Version: 1.0.49
+Summary: OpenAI Household Simulator: mobile manipulation using Bullet
+Home-page: https://github.com/openai/roboschool
+Maintainer: Oleg Klimov
+Maintainer-email: omgtech@gmail.com
+License: UNKNOWN
+Platform: UNKNOWN
+Requires-Dist: gym
+
+UNKNOWN
+
+
