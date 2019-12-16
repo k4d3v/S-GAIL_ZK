@@ -142,8 +142,8 @@ torch.manual_seed(args.seed)
 env.seed(args.seed)
 
 """Directory of demos; state and action dim"""
-demo_dir = "/home/developer/S-GAIL_ZK/Expert" # TODO: Relative path ok?
-param_dir = "/home/developer/S-GAIL_ZK/params_MuJoCo" # TODO: Relative path ok?
+demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
+param_dir = "/home/developer/S-GAIL_ZK/params_MuJoCo/" # TODO: Relative path ok?
 
 atime = datetime.now()
 new_dir_path = "/home/developer/S-GAIL_ZK/log_mujoco/%d-%d %d:%d" % (atime.month, atime.day, atime.hour, atime.minute) # TODO: Relative path ok?
@@ -158,8 +158,8 @@ if args.env_name == "Reacher-v2":
     encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class two has index 6392
 
     # States
-    state_expert = np.load(demo_dir + "state_mujoco.npy")[:6392]
-    action_expert = np.load(demo_dir + "action_mujoco.npy")[:6392]
+    state_expert = np.load(demo_dir + "state_mujoco.npy")[:6392]  # State is 6D, but normally 11D
+    action_expert = np.load(demo_dir + "action_mujoco.npy")[:6392]  # Actions are 2 dim
 
     # Normalize & Get Min-Max
     state_expert_norm = min_max(state_expert, axis=0)
@@ -185,7 +185,7 @@ else:
     is_disc_action = len(env.action_space.shape) == 0
     action_dim = 1 if is_disc_action else env.action_space.shape[0]
     expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
-    expert_traj = expert_traj[:450]
+    expert_traj = expert_traj[:450] # State: 9d, action: 2d
     # First 2100 (s,a) pairs are class 1; 1750,3450,2700
     # 11250,11400,14600,12750
     # running_reward = ZFilter((1,), demean=False, clip=10)
