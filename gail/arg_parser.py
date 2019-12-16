@@ -6,9 +6,9 @@ def prep_parser():
     Add parser args
     """
     parser = argparse.ArgumentParser(description='PyTorch GAIL example')
-    parser.add_argument('--env-name', default="Reacher-v2", metavar='G',
+    parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                         help='name of the environment to run, default: Hopper-v2')
-    parser.add_argument('--expert-traj-path', default="../assets/expert_traj/Hopper-v2_expert_traj.p", metavar='G',
+    parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/Hopper-v2_expert_traj.p", metavar='G',
                         help='path of the expert trajectories (Reacher: Reacher-v2)')
     parser.add_argument('--render', action='store_true', default=False,
                         help='render the environment')

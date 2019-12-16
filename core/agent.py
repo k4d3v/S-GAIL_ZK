@@ -10,7 +10,8 @@ import time
 
 
 def collect_samples(pid, queue, env, policy, custom_reward,
-                    mean_action, render, running_state, min_batch_size, s_min, s_max, a_min, a_max, beta):
+                    mean_action, render, running_state, min_batch_size, 
+                    s_min, s_ma, a_min, a_max, beta):
     """
     Rollout for each thread
     @param pid:
@@ -142,7 +143,8 @@ class Agent:
         self.render = render
         self.num_threads = num_threads
 
-    def collect_samples(self, state_min, state_max, a_min, a_max, min_batch_size, beta):
+    def collect_samples(self, min_batch_size,
+                        state_min=None, state_max=None, a_min=None, a_max=None, beta=None):
         """
         Parallelized version of rollout. Each worker calls outer fun
         """

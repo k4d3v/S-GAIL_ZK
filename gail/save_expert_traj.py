@@ -1,5 +1,6 @@
 import argparse
 import gym
+import pybulletgym
 import os
 import sys
 import pickle
@@ -10,11 +11,11 @@ from utils import *
 
 
 parser = argparse.ArgumentParser(description='Save expert trajectory')
-parser.add_argument('--env-name', default="Hopper-v2", metavar='G',
+parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the expert model')
-parser.add_argument('--render', action='store_true', default=False,
+parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')

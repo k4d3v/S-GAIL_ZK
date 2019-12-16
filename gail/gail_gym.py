@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import gym
+import pybulletgym
 import os
 import sys
 import pickle
@@ -9,7 +10,7 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
-from utils.arg_parser import prep_parser
+from arg_parser import prep_parser
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from models.mlp_policy_disc import DiscretePolicy
@@ -96,7 +97,7 @@ def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
-        batch, log = agent.collect_samples(state_min, state_max, action_min, action_max, args.min_batch_size, beta)
+        batch, log = agent.collect_samples(args.min_batch_size, state_min, state_max, action_min, action_max, beta)
         discrim_net.to(device)
 
         t0 = time.time()
@@ -142,12 +143,11 @@ torch.manual_seed(args.seed)
 env.seed(args.seed)
 
 """Directory of demos; state and action dim"""
-# TODO: Parser args
-demo_dir = "../Expert/"
-param_dir = "../params_MuJoCo/"
+demo_dir = "/home/developer/S-GAIL_ZK/Expert" # TODO: Relative path ok?
+param_dir = "/home/developer/S-GAIL_ZK/params_MuJoCo" # TODO: Relative path ok?
 
 atime = datetime.now()
-new_dir_path = "../log_mujoco/%d-%d %d:%d" % (atime.month, atime.day, atime.hour, atime.minute)
+new_dir_path = "/home/developer/S-GAIL_ZK/log_mujoco/%d-%d %d:%d" % (atime.month, atime.day, atime.hour, atime.minute) # TODO: Relative path ok?
 os.mkdir(new_dir_path)
 print("Make directory: " + new_dir_path)
 
