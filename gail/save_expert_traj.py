@@ -13,8 +13,8 @@ from utils import *
 parser = argparse.ArgumentParser(description='Save expert trajectory')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0", metavar='G',
-                    help='name of the expert model')
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo.p", metavar='G',
+                    help='name of the expert model') # TODO: Relative path
 parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
