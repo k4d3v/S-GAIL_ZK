@@ -36,7 +36,6 @@ def sgail_reward(state, action, beta):
     """
     state_action = tensor(np.hstack([state, action]), dtype=dtype)
 
-    aa = discrim_net(state_action)[0].item()
     a = math.log(discrim_net(state_action)[0].item())
     b = math.log(1 - discrim_net(state_action)[0].item())
     d = policy_net(state)
@@ -186,8 +185,9 @@ else:
     is_disc_action = len(env.action_space.shape) == 0
     action_dim = 1 if is_disc_action else env.action_space.shape[0]
     expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
-    expert_traj = expert_traj[:5500]
-    # First 5500  trajs are class 1
+    expert_traj = expert_traj[:450]
+    # First 2100 (s,a) pairs are class 1; 1750,3450,2700
+    # 11250,11400,14600,12750
     # running_reward = ZFilter((1,), demean=False, clip=10)
 
     state_max, state_min, action_max, action_min = None, None, None, None

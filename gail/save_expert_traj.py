@@ -20,7 +20,7 @@ parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=10000, metavar='N',
+parser.add_argument('--max-expert-state-num', type=int, default=2000, metavar='N',
                     help='maximal number of main iterations (default: 50000)')
 args = parser.parse_args()
 
@@ -35,7 +35,7 @@ state_dim = env.observation_space.shape[0]
 
 policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
 expert_traj = []
-expert_traj01, expert_traj10 = [], []
+expert_traj0001, expert_traj0010, expert_traj0100, expert_traj1000 = [], [], [], []
 
 
 def main_loop():
@@ -46,10 +46,15 @@ def main_loop():
         state = env.reset()
 
         # Determine target and current demo class
-        target_pose = env.env.robot.target.pose().xyz()
-        t01 = target_pose[0]<0 and target_pose[1]<0
-        t10 = target_pose[0]>0 and target_pose[1]>0
-        if not t01 and not t10: 
+        target_pose = env.env.robot.target.pose().xyz()[:2]
+        pos = 0.15
+        dist = 0.005
+        t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
+        t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
+        t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
+        t11 = np.linalg.norm(target_pose-[pos,pos])<dist
+        if not (t00 or t01 or t10 or t11): 
+            #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate
         
         state = running_state(state)
@@ -67,10 +72,14 @@ def main_loop():
             reward_episode += reward
             num_steps += 1
 
-            if t01:
-                expert_traj01.append(np.hstack([state, action]))
-            else:
-                expert_traj10.append(np.hstack([state, action]))
+            if t00:
+                expert_traj0001.append(np.hstack([state, action]))
+            elif t01:
+                expert_traj0010.append(np.hstack([state, action]))
+            elif t10:
+                expert_traj0100.append(np.hstack([state, action]))
+            elif t11:
+                expert_traj1000.append(np.hstack([state, action]))
 
             if args.render:
                 time.sleep(0.1 / 60.)  # For human-friendly visualization
@@ -88,12 +97,17 @@ def main_loop():
 
 main_loop()
 
-expert_traj01 = np.stack(expert_traj01)
-expert_traj10 = np.stack(expert_traj10)
-expert_traj = np.concatenate((expert_traj01, expert_traj10), axis=0)
+expert_traj0001 = np.stack(expert_traj0001)
+expert_traj0010 = np.stack(expert_traj0010)
+expert_traj0100 = np.stack(expert_traj0100)
+expert_traj1000 = np.stack(expert_traj1000)
+expert_traj = np.concatenate(
+    (expert_traj0001, expert_traj0010, expert_traj0100, expert_traj1000), axis=0)
 # Encode class
-encode = np.concatenate((np.array([(0,1)]*expert_traj01.shape[0]),
-                        np.array([(1,0)]*expert_traj10.shape[0])))
+encode = np.concatenate((np.array([(0,0,0,1)]*expert_traj0001.shape[0]),
+                        np.array([(0,0,1,0)]*expert_traj0010.shape[0]),
+                        np.array([(0,1,0,0)]*expert_traj0010.shape[0]),
+                        np.array([(1,0,0,0)]*expert_traj1000.shape[0])), axis=0)
 # Save trajs and encodes
 pickle.dump((expert_traj, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_expert_traj.p'.format(args.env_name)), 'wb'))
 pickle.dump((encode, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_encode.p'.format(args.env_name)), 'wb'))

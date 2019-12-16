@@ -28,9 +28,9 @@ def prep_parser():
                         help='number of threads for agent (default: 4)')
     parser.add_argument('--seed', type=int, default=1, metavar='N',
                         help='random seed (default: 1)')
-    parser.add_argument('--min-batch-size', type=int, default=512, metavar='N',
+    parser.add_argument('--min-batch-size', type=int, default=1024, metavar='N',
                         help='minimal batch size per PPO update (default: 2048)')
-    parser.add_argument('--max-iter-num', type=int, default=200, metavar='N',
+    parser.add_argument('--max-iter-num', type=int, default=300, metavar='N',
                         help='maximal number of main iterations (default: 500)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 2)')
