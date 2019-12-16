@@ -21,7 +21,7 @@ from core.common import estimate_advantages
 from core.agent import Agent
 
 
-def gail_reward(state, action):
+def gail_reward(state, action, beta):
     """
     Reward based on Discriminator net output as described in GAIL
     """
@@ -156,7 +156,7 @@ print("Make directory: " + new_dir_path)
 # TODO: Why different?
 if args.env_name == "Reacher-v2":
     # Labels
-    encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class to has index 6392
+    encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class two has index 6392
 
     # States
     state_expert = np.load(demo_dir + "state_mujoco.npy")[:6392]
@@ -186,6 +186,8 @@ else:
     is_disc_action = len(env.action_space.shape) == 0
     action_dim = 1 if is_disc_action else env.action_space.shape[0]
     expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
+    expert_traj = expert_traj[:5500]
+    # First 5500  trajs are class 1
     # running_reward = ZFilter((1,), demean=False, clip=10)
 
     state_max, state_min, action_max, action_min = None, None, None, None
@@ -215,7 +217,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
+agent = Agent(env, policy_net, device, custom_reward=gail_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 # Finally do the learning

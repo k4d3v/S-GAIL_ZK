@@ -8,7 +8,7 @@ def prep_parser():
     parser = argparse.ArgumentParser(description='PyTorch GAIL example')
     parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                         help='name of the environment to run, default: Hopper-v2')
-    parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/Hopper-v2_expert_traj.p", metavar='G',
+    parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_expert_traj.p", metavar='G',
                         help='path of the expert trajectories (Reacher: Reacher-v2)')
     parser.add_argument('--render', action='store_true', default=False,
                         help='render the environment')
@@ -28,13 +28,13 @@ def prep_parser():
                         help='number of threads for agent (default: 4)')
     parser.add_argument('--seed', type=int, default=1, metavar='N',
                         help='random seed (default: 1)')
-    parser.add_argument('--min-batch-size', type=int, default=256, metavar='N',
+    parser.add_argument('--min-batch-size', type=int, default=512, metavar='N',
                         help='minimal batch size per PPO update (default: 2048)')
     parser.add_argument('--max-iter-num', type=int, default=200, metavar='N',
                         help='maximal number of main iterations (default: 500)')
-    parser.add_argument('--log-interval', type=int, default=5, metavar='N',
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 2)')
-    parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
+    parser.add_argument('--save-model-interval', type=int, default=100, metavar='N',
                         help="interval between saving model (default: 0, means don't save)")
     parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
     # Args for SGAIL: Beta and beta change
