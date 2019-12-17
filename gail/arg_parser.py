@@ -9,7 +9,7 @@ def prep_parser():
     parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                         help='name of the environment to run, default: Hopper-v2')
     parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_expert_traj.p", metavar='G',
-                        help='path of the expert trajectories (Reacher: Reacher-v2)')
+                        help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_expert_traj.p)')
     parser.add_argument('--render', action='store_true', default=False,
                         help='render the environment')
     parser.add_argument('--log-std', type=float, default=-1.0, metavar='G',

@@ -11,7 +11,7 @@ import time
 
 def collect_samples(pid, queue, env, policy, custom_reward,
                     mean_action, render, running_state, min_batch_size, 
-                    s_min, s_ma, a_min, a_max, beta):
+                    s_min, s_max, a_min, a_max, beta):
     """
     Rollout for each thread
     @param pid:

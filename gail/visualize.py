@@ -5,10 +5,12 @@ import os
 import sys
 import pickle
 import time
+import copy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from itertools import count
 from utils import *
+from utils.get_reacher_vars import get_exp
 
 
 parser = argparse.ArgumentParser(description='Rollout learner')
@@ -34,15 +36,24 @@ is_disc_action = len(env.action_space.shape) == 0
 state_dim = env.observation_space.shape[0]
 
 policy_net, V, D = pickle.load(open(args.model_path, "rb"))
-running_state = ZFilter((state_dim,), clip=5)
+
+"""Directory of demos; state and action dim"""
+demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
+param_dir = "/home/developer/S-GAIL_ZK/params_MuJoCo/" # TODO: Relative path ok?
+
+"""Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
+state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args, demo_dir)
+
 
 # TODO: Show traj only if class 1
 def main_loop():
     num_steps = 0
 
     for i_episode in count():
-        state = env.reset()
-        state = running_state(state)
+        obs = env.reset()
+        state = delete(copy.copy(obs), state_min, state_max) if state_min is not None else obs
+        if running_state is not None:
+            state = running_state(state)
 
         # Determine target and current demo class
         target_pose = env.env.robot.target.pose().xyz()[:2]
@@ -59,8 +70,11 @@ def main_loop():
             # choose stochastic action
             # action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)
-            next_state, reward, done, _ = env.step(action)
-            next_state = running_state(next_state)
+            obs, reward, done, _ = env.step(action)
+            next_state = delete(copy.copy(obs), state_min, state_max) if state_min is not None else obs
+            if running_state is not None:
+                state = running_state(state)
+
             reward_episode += reward
             num_steps += 1
 

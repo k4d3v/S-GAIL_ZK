@@ -12,9 +12,10 @@ qvel.flat[:2],  # self.sim.data.qvel.flat[:2],
 self.to_target_vec   # self.get_body_com("fingertip") - self.get_body_com("target")
 
 pyBullet: (cos(theta1), 
-	sin(theta1),
-	cos(theta2), 
+	cos(theta2),
+	sin(theta1), 
 	sin(theta2),
+
 	x,
 	y,
 	dx,
@@ -25,7 +26,8 @@ MuJoCo:
 0	(cos(theta1)		
 1 	cos(theta2)		
 2 	sin(theta1)		
-3 	sin(theta2) 		
+3 	sin(theta2) 	
+	
 4 	qpos (the x coordinate of the target ) 		
 5 	qpos (the y coordinate of the target ) 		
 6 	qvel (the velocity of the fingertip in the x direction ) 		
@@ -37,4 +39,9 @@ MuJoCo:
 S-GAIL
 continuous six-dimensional vector 
 (sin θi, cos θi, θi dθi/dt)
+
+(sin theta1, sin theta2,
+cos theta1, cos theta2,
+dtheta1, dtheta2)
+
 , where i is the link number (i = 1, 2) and θi is the relative angle of the link in the x-y plane
