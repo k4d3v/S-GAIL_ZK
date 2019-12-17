@@ -4,18 +4,19 @@ from utils import *
 
 
 def get_exp(env, args):
+    """
     # State and action dim + filter
     # TODO: Why different?
-    if args.env_name == "Reacher-v2":
-        """Directory of demos; state and action dim"""
+    if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0":
+        '''Directory of demos; state and action dim'''
         demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
         
         # Labels
         encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class two has index 6392
 
         # States (class one :6392)
-        state_expert = np.load(demo_dir + "state_mujoco.npy")  # State is 6D, but normally 11D
-        action_expert = np.load(demo_dir + "action_mujoco.npy")  # Actions are 2 dim
+        state_expert = np.load(demo_dir + "state_mujoco.npy")[:6329]  # State is 6D, but normally 11D
+        action_expert = np.load(demo_dir + "action_mujoco.npy")[:6329]  # Actions are 2 dim
 
         # Normalize & Get Min-Max
         state_expert_norm = min_max(state_expert, axis=0)
@@ -24,27 +25,22 @@ def get_exp(env, args):
         state_dim = state_expert_norm.shape[1]
         is_disc_action = len(env.action_space.shape) == 0
         action_dim = env.action_space.shape[0]
-        running_state = ZFilter((state_dim,), clip=5)
+        running_state = ZFilter((env.observation_space.shape[0]), clip=5)
 
         # Combine state and actions into one array
         expert_traj = np.concatenate((state_expert_norm, action_expert_norm), axis=1)
-
-        state_max = np.max(state_expert, axis=0)
-        state_min = np.min(state_expert, axis=0)
-        action_max = np.max(action_expert, axis=0)  # = [0.2112, 0.3219]
-        action_min = np.min(action_expert, axis=0)  # = [-0.1343, -0.0819]
-
+    """
     # load trajectory from expert
     # TODO: Is running state needed?
-    else:
-        state_dim = env.observation_space.shape[0]
-        is_disc_action = len(env.action_space.shape) == 0
-        action_dim = 1 if is_disc_action else env.action_space.shape[0]
-        expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
-        # running_reward = ZFilter((1,), demean=False, clip=10)
-        encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
+    """else:"""
+    state_dim = 6 if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0" else env.observation_space.shape[0]  
+    is_disc_action = len(env.action_space.shape) == 0
+    action_dim = 1 if is_disc_action else env.action_space.shape[0]
+    expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
+    # running_reward = ZFilter((1,), demean=False, clip=10)
+    encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
 
-        state_max, state_min, action_max, action_min = None, None, None, None
+    state_max, state_min, action_max, action_min = None, None, None, None
 
     return (state_dim, action_dim, is_disc_action,
             expert_traj, running_state, encodes_d,

@@ -143,8 +143,8 @@ env.seed(args.seed)
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
 state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
 # 11250 11400 14600 12750
-expert_traj = expert_traj[:11250]
-encodes_d = encodes_d[:11250]
+#expert_traj = expert_traj[:11250]
+#encodes_d = encodes_d[:11250]
 
 """define actor and critic"""
 # Policy = Generator

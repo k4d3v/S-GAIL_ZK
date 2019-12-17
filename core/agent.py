@@ -16,6 +16,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     Rollout for each thread
     @return: memory, log
     """
+    env_name = env.spec.id
     torch.randn(pid)
     log = dict()
     memory = Memory()
@@ -29,8 +30,10 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     num_episodes = 0
 
     while num_steps < min_batch_size:
-        obs = env.reset()
-        state = delete(copy.copy(obs), s_min, s_max) if s_min is not None else obs
+        state = env.reset()
+        state = delete(copy.copy(state), s_min, s_max) if s_min is not None else state
+        if env_name == "ReacherPyBulletEnv-v0":
+            state = np.delete(copy.copy(state), [4, 5, 8])
         if running_state is not None:
             state = running_state(state)
         reward_episode = 0
@@ -44,11 +47,14 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                     action = policy.select_action(state_var)[0].numpy()
             aaction = int(action) if policy.is_disc_action else action.astype(np.float64)
             action = norm_act(aaction, a_min, a_max) if a_min is not None else aaction
-            obs, reward, done, _ = env.step(action)
-            next_state = delete(copy.copy(obs), s_min, s_max) if s_min is not None else obs
-            reward_episode += reward
+            next_state, reward, done, _ = env.step(action)
+            next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else next_state
+            if env_name == "ReacherPyBulletEnv-v0":
+                next_state = np.delete(copy.copy(next_state), [4, 5, 8])
             if running_state is not None:
                 next_state = running_state(next_state)
+
+            reward_episode += reward
 
             if custom_reward is not None:
                 reward = custom_reward(state, action, beta)

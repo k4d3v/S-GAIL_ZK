@@ -40,7 +40,7 @@ parser.add_argument('--num-threads', type=int, default=1, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=512, metavar='N',
+parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
                     help='minimal batch size per TRPO update (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=400, metavar='N',
                     help='maximal number of main iterations (default: 500)')
@@ -60,16 +60,22 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
+if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0":
+    state_dim = 6
+    state_min, state_max = None, None
+    action_min = env.action_space.low
+    action_max = env.action_space.high
+else:
+    state_dim = env.observation_space.shape[0] 
+is_disc_action = len(env.action_space.shape) == 0
+running_state = ZFilter((state_dim,), clip=5)
+# running_reward = ZFilter((1,), demean=False, clip=10)
+state_min, state_max, action_min, action_max = None, None, None, None
 
 """seeding"""
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 env.seed(args.seed)
-
-# State for Reacher like in S-GAIL paper
-# Get important vars
-state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
-# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """define actor and critic"""
 if args.model_path is None:

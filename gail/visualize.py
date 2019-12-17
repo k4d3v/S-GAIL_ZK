@@ -16,7 +16,7 @@ from utils.get_reacher_vars import get_exp
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_ppo.p", metavar='G',
                     help='name of the model') # TODO: Relative path
 parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_", metavar='G',
                         help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_)')
@@ -54,9 +54,9 @@ def main_loop():
         if not t01: 
             continue  # Skip following lines if cordinates alternate
         
-        if state_min is not None:
-            state = running_state(delete(copy.copy(state), state_min, state_max))  
-        else:
+        if args.env_name == "ReacherPyBulletEnv-v0":
+            state = np.delete(copy.copy(state), [4, 5, 8]) 
+        elif running_state is not None:
             state = running_state(state)
         
         reward_episode = 0
@@ -69,9 +69,9 @@ def main_loop():
             # action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)
             next_state, reward, done, _ = env.step(action)
-            if state_min is not None:
-                next_state = running_state(delete(copy.copy(next_state), state_min, state_max))
-            else:
+            if args.env_name == "ReacherPyBulletEnv-v0":
+                next_state = np.delete(copy.copy(next_state), [4, 5, 8])
+            elif running_state is not None:
                 next_state = running_state(next_state)
 
             reward_episode += reward

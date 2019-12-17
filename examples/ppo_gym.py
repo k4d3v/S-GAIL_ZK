@@ -39,13 +39,13 @@ parser.add_argument('--num-threads', type=int, default=1, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
+parser.add_argument('--min-batch-size', type=int, default=512, metavar='N',
                     help='minimal batch size per PPO update (default: 2048)')
-parser.add_argument('--max-iter-num', type=int, default=400, metavar='N',
+parser.add_argument('--max-iter-num', type=int, default=300, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
-parser.add_argument('--save-model-interval', type=int, default=200, metavar='N',
+parser.add_argument('--save-model-interval', type=int, default=100, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
@@ -58,10 +58,19 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
-state_dim = env.observation_space.shape[0]
+if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0":
+    state_dim = 6
+    state_min, state_max = None, None
+    action_min = env.action_space.low
+    action_max = env.action_space.high
+    running_state = None
+else:
+    state_dim = env.observation_space.shape[0] 
+
+    running_state = ZFilter((state_dim,), clip=5)
+    # running_reward = ZFilter((1,), demean=False, clip=10)
 is_disc_action = len(env.action_space.shape) == 0
-running_state = ZFilter((state_dim,), clip=5)
-# running_reward = ZFilter((1,), demean=False, clip=10)
+state_min, state_max, action_min, action_max = None, None, None, None
 
 """seeding"""
 np.random.seed(args.seed)
