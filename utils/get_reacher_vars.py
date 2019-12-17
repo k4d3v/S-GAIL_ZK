@@ -3,16 +3,19 @@ import pickle
 from utils import *
 
 
-def get_exp(env, args, demo_dir):
+def get_exp(env, args):
     # State and action dim + filter
     # TODO: Why different?
     if args.env_name == "Reacher-v2":
+        """Directory of demos; state and action dim"""
+        demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
+        
         # Labels
         encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class two has index 6392
 
-        # States
-        state_expert = np.load(demo_dir + "state_mujoco.npy")[:6392]  # State is 6D, but normally 11D
-        action_expert = np.load(demo_dir + "action_mujoco.npy")[:6392]  # Actions are 2 dim
+        # States (class one :6392)
+        state_expert = np.load(demo_dir + "state_mujoco.npy")  # State is 6D, but normally 11D
+        action_expert = np.load(demo_dir + "action_mujoco.npy")  # Actions are 2 dim
 
         # Normalize & Get Min-Max
         state_expert_norm = min_max(state_expert, axis=0)
@@ -38,9 +41,6 @@ def get_exp(env, args, demo_dir):
         is_disc_action = len(env.action_space.shape) == 0
         action_dim = 1 if is_disc_action else env.action_space.shape[0]
         expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
-        expert_traj = expert_traj[:450] # State: 9d, action: 2d
-        # First 2100 (s,a) pairs are class 1; 1750,3450,2700
-        # 11250,11400,14600,12750
         # running_reward = ZFilter((1,), demean=False, clip=10)
         encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
 

@@ -14,13 +14,13 @@ from utils import *
 parser = argparse.ArgumentParser(description='Save expert trajectory')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_11dim.p", metavar='G',
                     help='name of the expert model') # TODO: Relative path
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=10000, metavar='N',
+parser.add_argument('--max-expert-state-num', type=int, default=50000, metavar='N',
                     help='maximal number of main iterations (default: 50000)')
 args = parser.parse_args()
 
@@ -97,6 +97,7 @@ def main_loop():
 
 main_loop()
 
+print(len(expert_traj0001), len(expert_traj0010), len(expert_traj0100), len(expert_traj1000))
 expert_traj0001 = np.stack(expert_traj0001)
 expert_traj0010 = np.stack(expert_traj0010)
 expert_traj0100 = np.stack(expert_traj0100)

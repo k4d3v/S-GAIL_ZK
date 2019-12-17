@@ -14,18 +14,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                     s_min, s_max, a_min, a_max, beta):
     """
     Rollout for each thread
-    @param pid:
-    @param queue:
-    @param env:
-    @param policy:
-    @param custom_reward:
-    @param mean_action:
-    @param render:
-    @param running_state: ZFilter
-    @param min_batch_size:
-    @param s_min: For state reduction
-    @param s_max: For state reduction
-    @return:
+    @return: memory, log
     """
     torch.randn(pid)
     log = dict()
@@ -125,13 +114,6 @@ class Agent:
     def __init__(self, env, policy, device, custom_reward=None,
                  mean_action=False, render=False, running_state=None, num_threads=1):
         """
-        @param env:
-        @param policy:
-        @param device:
-        @param custom_reward:
-        @param mean_action:
-        @param render:
-        @param running_state:
         @param num_threads: More than one means parallel execution when collecting samples
         """
         self.env = env

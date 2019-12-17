@@ -8,6 +8,7 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
+from utils.get_reacher_vars import get_exp
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from models.mlp_policy_disc import DiscretePolicy
@@ -39,7 +40,7 @@ parser.add_argument('--num-threads', type=int, default=1, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
+parser.add_argument('--min-batch-size', type=int, default=512, metavar='N',
                     help='minimal batch size per TRPO update (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=400, metavar='N',
                     help='maximal number of main iterations (default: 500)')
@@ -50,6 +51,7 @@ parser.add_argument('--save-model-interval', type=int, default=200, metavar='N',
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
 
+"""Prepare torch"""
 dtype = torch.float64
 torch.set_default_dtype(dtype)
 device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available() else torch.device('cpu')
@@ -58,15 +60,16 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
-state_dim = env.observation_space.shape[0]
-is_disc_action = len(env.action_space.shape) == 0
-running_state = ZFilter((state_dim,), clip=5)
-# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """seeding"""
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 env.seed(args.seed)
+
+# State for Reacher like in S-GAIL paper
+# Get important vars
+state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
+# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """define actor and critic"""
 if args.model_path is None:
@@ -102,7 +105,7 @@ def update_params(batch):
 def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
-        batch, log = agent.collect_samples(args.min_batch_size)
+        batch, log = agent.collect_samples(args.min_batch_size, state_min, state_max, action_min, action_max)
         t0 = time.time()
         update_params(batch)
         t1 = time.time()

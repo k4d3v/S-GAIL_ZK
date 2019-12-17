@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import gym
 import pybulletgym
 import os
@@ -142,17 +140,11 @@ np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 env.seed(args.seed)
 
-"""Directory of demos; state and action dim"""
-demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
-param_dir = "/home/developer/S-GAIL_ZK/params_MuJoCo/" # TODO: Relative path ok?
-
-atime = datetime.now()
-new_dir_path = "/home/developer/S-GAIL_ZK/log_mujoco/%d-%d %d:%d" % (atime.month, atime.day, atime.hour, atime.minute) # TODO: Relative path ok?
-os.mkdir(new_dir_path)
-print("Make directory: " + new_dir_path)
-
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
-state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args, demo_dir)
+state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
+# 11250 11400 14600 12750
+expert_traj = expert_traj[:11250]
+encodes_d = encodes_d[:11250]
 
 """define actor and critic"""
 # Policy = Generator

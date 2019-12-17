@@ -30,20 +30,20 @@ def min_max(x, axis=None):
 
 def delete(x, s_min, s_max):
     """
-    Reduce and clip x
-    @param x:
-    @param s_min:
-    @param s_max:
-    @return:
+    Reduce and clip x. Yields state as in S-GAIL paper
+    @param x: state
+    @param s_min: Lower clipping bound
+    @param s_max: Upper clipping bound
+    @return: s=(sin(th1), sin(th2), cos(th1), cos(th2), dth1, dth2)
     """
-    y = np.delete(x, [4, 5, 8, 9, 10])
+    y = np.delete(x, [4, 5, 8])
     result = np.clip((y - s_min) / (s_max - s_min), 0.0, 1.0)
     return result
 
 
 def norm_act(x, a_min, a_max):
     """
-    Normalize action
+    Normalize action by clipping
     @param x:
     @param a_min:
     @param a_max:

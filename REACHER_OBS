@@ -1,3 +1,5 @@
+"""pyBullet"""
+
 qpos = np.array([j.current_position() for j in self.ordered_joints])  # shape (4,)
 qvel = np.array([j.current_relative_position()[1] for j in self.ordered_joints])  # shape (4,) # TODO: Add target pos and vel
 
@@ -11,23 +13,22 @@ qpos.flat[2:],  # self.sim.data.qpos.flat[2:],
 qvel.flat[:2],  # self.sim.data.qvel.flat[:2],
 self.to_target_vec   # self.get_body_com("fingertip") - self.get_body_com("target")
 
-pyBullet: (cos(theta1), 
-	cos(theta2),
-	sin(theta1), 
-	sin(theta2),
+0	(cos(theta1), 
+1	cos(theta2),
+2	sin(theta1), 
+3	sin(theta2),
+4	x,
+5	y,
+6	dx,
+7	dy,
+8	xf, yf, zf)
 
-	x,
-	y,
-	dx,
-	dy,
-	xf, yf, zf)
+"""MuJoCo"""
 
-MuJoCo:
 0	(cos(theta1)		
 1 	cos(theta2)		
 2 	sin(theta1)		
-3 	sin(theta2) 	
-	
+3 	sin(theta2) 		
 4 	qpos (the x coordinate of the target ) 		
 5 	qpos (the y coordinate of the target ) 		
 6 	qvel (the velocity of the fingertip in the x direction ) 		
@@ -36,12 +37,17 @@ MuJoCo:
 9 	the y-axis component of the vector from the target to the fingertip 		
 10 	the z-axis component of the vector from the target to the fingertip)
 
-S-GAIL
+
+"""S-GAIL"""
+
 continuous six-dimensional vector 
 (sin θi, cos θi, θi dθi/dt)
 
-(sin theta1, sin theta2,
-cos theta1, cos theta2,
-dtheta1, dtheta2)
+0	(sin theta1,
+1 	sin theta2,
+2	cos theta1,
+3	cos theta2,
+4	dtheta1,
+5	dtheta2)
 
 , where i is the link number (i = 1, 2) and θi is the relative angle of the link in the x-y plane

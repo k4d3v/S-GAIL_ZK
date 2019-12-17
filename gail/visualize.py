@@ -16,7 +16,7 @@ from utils.get_reacher_vars import get_exp
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail.p", metavar='G',
                     help='name of the model') # TODO: Relative path
 parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_", metavar='G',
                         help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_)')
@@ -37,12 +37,8 @@ torch.manual_seed(args.seed)
 
 policy_net, _, _ = pickle.load(open(args.model_path, "rb"))
 
-"""Directory of demos; state and action dim"""
-demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
-param_dir = "/home/developer/S-GAIL_ZK/params_MuJoCo/" # TODO: Relative path ok?
-
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
-state_dim, action_dim, is_disc_action, _, running_state, _, state_max, state_min, action_max, action_min = get_exp(env, args, demo_dir)
+state_dim, action_dim, is_disc_action, _, running_state, _, state_max, state_min, action_max, action_min = get_exp(env, args)
 
 
 # TODO: Show traj only if class 1
@@ -82,7 +78,7 @@ def main_loop():
             num_steps += 1
 
             if args.render:
-                time.sleep(0.1 / 60.)  # For human-friendly visualization
+                time.sleep(1 / 60.)  # For human-friendly visualization
                 env.render(mode="human")
             if done or num_steps >= args.max_expert_state_num:
                 break
