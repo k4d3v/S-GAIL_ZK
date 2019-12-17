@@ -6,7 +6,7 @@ from utils import *
 def get_exp(env, args, demo_dir):
     # State and action dim + filter
     # TODO: Why different?
-    if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0":
+    if args.env_name == "Reacher-v2":
         # Labels
         encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class two has index 6392
 
@@ -37,11 +37,12 @@ def get_exp(env, args, demo_dir):
         state_dim = env.observation_space.shape[0]
         is_disc_action = len(env.action_space.shape) == 0
         action_dim = 1 if is_disc_action else env.action_space.shape[0]
-        expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
-        expert_traj = expert_traj # State: 9d, action: 2d
+        expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
+        expert_traj = expert_traj[:450] # State: 9d, action: 2d
         # First 2100 (s,a) pairs are class 1; 1750,3450,2700
         # 11250,11400,14600,12750
         # running_reward = ZFilter((1,), demean=False, clip=10)
+        encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
 
         state_max, state_min, action_max, action_min = None, None, None, None
 

@@ -8,8 +8,8 @@ def prep_parser():
     parser = argparse.ArgumentParser(description='PyTorch GAIL example')
     parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                         help='name of the environment to run, default: Hopper-v2')
-    parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_expert_traj.p", metavar='G',
-                        help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_expert_traj.p)')
+    parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_", metavar='G',
+                        help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_)')
     parser.add_argument('--render', action='store_true', default=False,
                         help='render the environment')
     parser.add_argument('--log-std', type=float, default=-1.0, metavar='G',
@@ -28,7 +28,7 @@ def prep_parser():
                         help='number of threads for agent (default: 4)')
     parser.add_argument('--seed', type=int, default=1, metavar='N',
                         help='random seed (default: 1)')
-    parser.add_argument('--min-batch-size', type=int, default=1024, metavar='N',
+    parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
                         help='minimal batch size per PPO update (default: 2048)')
     parser.add_argument('--max-iter-num', type=int, default=300, metavar='N',
                         help='maximal number of main iterations (default: 500)')
