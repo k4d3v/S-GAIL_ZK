@@ -60,17 +60,17 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
-if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0":
+if args.env_name == "ReacherPyBulletEnv-v0":
     state_dim = 6
     state_min, state_max = None, None
     action_min = env.action_space.low
     action_max = env.action_space.high
 else:
     state_dim = env.observation_space.shape[0] 
+    state_min, state_max, action_min, action_max = None, None, None, None
 is_disc_action = len(env.action_space.shape) == 0
 running_state = ZFilter((state_dim,), clip=5)
 # running_reward = ZFilter((1,), demean=False, clip=10)
-state_min, state_max, action_min, action_max = None, None, None, None
 
 """seeding"""
 np.random.seed(args.seed)

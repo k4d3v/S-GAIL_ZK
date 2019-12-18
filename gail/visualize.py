@@ -16,10 +16,10 @@ from utils.get_reacher_vars import get_exp
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_ppo.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_11dim.p", metavar='G',
                     help='name of the model') # TODO: Relative path
-parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_", metavar='G',
-                        help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_)')
+parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
+                    help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
 parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
@@ -35,11 +35,10 @@ env.seed(args.seed)
 if args.render: env.render(mode="human")
 torch.manual_seed(args.seed)
 
-policy_net, _, _ = pickle.load(open(args.model_path, "rb"))
+policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
-state_dim, action_dim, is_disc_action, _, running_state, _, state_max, state_min, action_max, action_min = get_exp(env, args)
-
+state_dim, action_dim, is_disc_action, _, _, _, state_max, state_min, action_max, action_min = get_exp(env, args)
 
 # TODO: Show traj only if class 1
 def main_loop():
@@ -54,10 +53,11 @@ def main_loop():
         if not t01: 
             continue  # Skip following lines if cordinates alternate
         
-        if args.env_name == "ReacherPyBulletEnv-v0":
+        if args.lower_dim == 6 and args.env_name == "ReacherPyBulletEnv-v0":
             state = np.delete(copy.copy(state), [4, 5, 8]) 
-        elif running_state is not None:
-            state = running_state(state)
+        elif args.lower_dim == 6 and args.env_name == "Reacher-v2":
+            state = np.delete(copy.copy(state), [4, 5, 8, 9, 10])
+        state = running_state(state)
         
         reward_episode = 0
         
@@ -69,10 +69,11 @@ def main_loop():
             # action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)
             next_state, reward, done, _ = env.step(action)
-            if args.env_name == "ReacherPyBulletEnv-v0":
+            if args.lower_dim == 6 and args.env_name == "ReacherPyBulletEnv-v0":
                 next_state = np.delete(copy.copy(next_state), [4, 5, 8])
-            elif running_state is not None:
-                next_state = running_state(next_state)
+            elif args.lower_dim == 6 and args.env_name == "Reacher-v2":
+                next_state = np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
+            next_state = running_state(next_state)
 
             reward_episode += reward
             num_steps += 1

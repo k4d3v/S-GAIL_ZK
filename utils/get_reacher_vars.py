@@ -1,46 +1,34 @@
 import pickle
+import numpy as np
 
 from utils import *
 
 
 def get_exp(env, args):
-    """
-    # State and action dim + filter
-    # TODO: Why different?
-    if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0":
-        '''Directory of demos; state and action dim'''
-        demo_dir = "/home/developer/S-GAIL_ZK/Expert/" # TODO: Relative path ok?
-        
-        # Labels
-        encodes_d = np.load(demo_dir + "encode_mujoco.npy")  # Class two has index 6392
-
-        # States (class one :6392)
-        state_expert = np.load(demo_dir + "state_mujoco.npy")[:6329]  # State is 6D, but normally 11D
-        action_expert = np.load(demo_dir + "action_mujoco.npy")[:6329]  # Actions are 2 dim
-
-        # Normalize & Get Min-Max
-        state_expert_norm = min_max(state_expert, axis=0)
-        action_expert_norm = min_max(action_expert, axis=0)
-
-        state_dim = state_expert_norm.shape[1]
-        is_disc_action = len(env.action_space.shape) == 0
-        action_dim = env.action_space.shape[0]
-        running_state = ZFilter((env.observation_space.shape[0]), clip=5)
-
-        # Combine state and actions into one array
-        expert_traj = np.concatenate((state_expert_norm, action_expert_norm), axis=1)
-    """
     # load trajectory from expert
     # TODO: Is running state needed?
-    """else:"""
-    state_dim = 6 if args.env_name == "Reacher-v2" or args.env_name == "ReacherPyBulletEnv-v0" else env.observation_space.shape[0]  
     is_disc_action = len(env.action_space.shape) == 0
     action_dim = 1 if is_disc_action else env.action_space.shape[0]
-    expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
-    # running_reward = ZFilter((1,), demean=False, clip=10)
-    encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
+    try:
+        expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
+        # running_reward = ZFilter((1,), demean=False, clip=10)
+        encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
 
-    state_max, state_min, action_max, action_min = None, None, None, None
+        if args.lower_dim <env.observation_space.shape[0]:
+            state_dim = args.lower_dim
+            if env.name == "ReacherPyBulletEnv-v0":
+                expert_traj = np.delete(expert_traj, [4,5,8], axis=1)
+            elif env.name == "Reacher-v2":
+                expert_traj = np.delete(expert_traj, [4,5,8,9,10], axis=1)
+        else:
+            state_dim = env.observation_space.shape[0]  
+
+    # Expert trajs are not needed
+    except AttributeError:
+        expert_traj, running_state, encodes_d = None, None, None
+        state_dim = args.lower_dim if args.lower_dim <env.observation_space.shape[0] else env.observation_space.shape[0]  
+
+    state_max, state_min, action_max, action_min = None, None, env.action_space.high, env.action_space.low
 
     return (state_dim, action_dim, is_disc_action,
             expert_traj, running_state, encodes_d,

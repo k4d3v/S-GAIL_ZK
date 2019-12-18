@@ -5,6 +5,7 @@ import os
 import sys
 import pickle
 import time
+import copy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from itertools import count
@@ -16,7 +17,9 @@ parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_11dim.p", metavar='G',
                     help='name of the expert model') # TODO: Relative path
-parser.add_argument('--render', action='store_true', default=False,
+parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
+                    help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
+parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
@@ -57,6 +60,10 @@ def main_loop():
             #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate
         
+        if args.lower_dim == 6 and args.env_name == "ReacherPyBulletEnv-v0":
+            state = np.delete(copy.copy(state), [4, 5, 8])
+        elif args.lower_dim == 6 and args.env_name == "Reacher-v2":
+            state = np.delete(copy.copy(state), [4, 5, 8, 9, 10])
         state = running_state(state)
         reward_episode = 0
 
@@ -68,6 +75,10 @@ def main_loop():
             # action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)
             next_state, reward, done, _ = env.step(action)
+            if args.lower_dim == 6 and args.env_name == "ReacherPyBulletEnv-v0":
+                next_state = np.delete(copy.copy(next_state), [4, 5, 8])
+            elif args.lower_dim == 6 and args.env_name == "Reacher-v2":
+                next_state = np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
             next_state = running_state(next_state)
             reward_episode += reward
             num_steps += 1
@@ -82,11 +93,11 @@ def main_loop():
                 expert_traj1000.append(np.hstack([state, action]))
 
             if args.render:
-                time.sleep(0.1 / 60.)  # For human-friendly visualization
+                time.sleep(1 / 60.)  # For human-friendly visualization
                 env.render(mode="human")
             if done or num_steps >= args.max_expert_state_num:
                 break
-
+            
             state = next_state
 
         print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))

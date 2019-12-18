@@ -34,8 +34,10 @@ def collect_samples(pid, queue, env, policy, custom_reward,
         state = delete(copy.copy(state), s_min, s_max) if s_min is not None else state
         if env_name == "ReacherPyBulletEnv-v0":
             state = np.delete(copy.copy(state), [4, 5, 8])
-        if running_state is not None:
-            state = running_state(state)
+        elif env_name == "Reacher-v2":
+            state = np.delete(copy.copy(state), [4, 5, 8, 9, 10])
+        state = running_state(state)
+
         reward_episode = 0
 
         for t in range(10000):
@@ -51,8 +53,9 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else next_state
             if env_name == "ReacherPyBulletEnv-v0":
                 next_state = np.delete(copy.copy(next_state), [4, 5, 8])
-            if running_state is not None:
-                next_state = running_state(next_state)
+            elif env_name == "Reacher-v2":
+                next_state = np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
+            next_state = running_state(next_state)
 
             reward_episode += reward
 
