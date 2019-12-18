@@ -11,7 +11,7 @@ import time
 
 def collect_samples(pid, queue, env, policy, custom_reward,
                     mean_action, render, running_state, min_batch_size, 
-                    s_min, s_max, a_min, a_max, beta):
+                    s_min, s_max, a_min, a_max, beta, lower_dim):
     """
     Rollout for each thread
     @return: memory, log
@@ -31,11 +31,11 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
     while num_steps < min_batch_size:
         state = env.reset()
-        state = delete(copy.copy(state), s_min, s_max) if s_min is not None else state
-        if env_name == "ReacherPyBulletEnv-v0":
-            state = np.delete(copy.copy(state), [4, 5, 8])
-        elif env_name == "Reacher-v2":
-            state = np.delete(copy.copy(state), [4, 5, 8, 9, 10])
+        if lower_dim:
+            if env_name == "ReacherPyBulletEnv-v0":
+                state = delete(copy.copy(state), s_min, s_max) if s_min is not None else np.delete(copy.copy(state), [4, 5, 8])
+            elif env_name == "Reacher-v2":
+                state = delete(copy.copy(state), s_min, s_max) if s_min is not None else np.delete(copy.copy(state), [4, 5, 8, 9, 10])
         state = running_state(state)
 
         reward_episode = 0
@@ -47,14 +47,14 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                     action = policy(state_var)[0][0].numpy()
                 else:
                     action = policy.select_action(state_var)[0].numpy()
-            aaction = int(action) if policy.is_disc_action else action.astype(np.float64)
-            action = norm_act(aaction, a_min, a_max) if a_min is not None else aaction
+            action = int(action) if policy.is_disc_action else action.astype(np.float64)
+            #action = norm_act(aaction, a_min, a_max) if a_min is not None else aaction
             next_state, reward, done, _ = env.step(action)
-            next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else next_state
-            if env_name == "ReacherPyBulletEnv-v0":
-                next_state = np.delete(copy.copy(next_state), [4, 5, 8])
-            elif env_name == "Reacher-v2":
-                next_state = np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
+            if lower_dim:
+                if env_name == "ReacherPyBulletEnv-v0":
+                    next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8])
+                elif env_name == "Reacher-v2":
+                    next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
             next_state = running_state(next_state)
 
             reward_episode += reward
@@ -121,7 +121,7 @@ def merge_log(log_list):
 class Agent:
 
     def __init__(self, env, policy, device, custom_reward=None,
-                 mean_action=False, render=False, running_state=None, num_threads=1):
+                 mean_action=False, render=False, running_state=None, lower_dim=False, num_threads=1):
         """
         @param num_threads: More than one means parallel execution when collecting samples
         """
@@ -132,6 +132,7 @@ class Agent:
         self.mean_action = mean_action
         self.running_state = running_state
         self.render = render
+        self.lower_dim = lower_dim
         self.num_threads = num_threads
 
     def collect_samples(self, min_batch_size,
@@ -153,7 +154,7 @@ class Agent:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max, beta)
+                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max, beta, self.lower_dim)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)

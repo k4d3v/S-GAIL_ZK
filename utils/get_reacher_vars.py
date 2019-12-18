@@ -13,12 +13,13 @@ def get_exp(env, args):
         expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
         # running_reward = ZFilter((1,), demean=False, clip=10)
         encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
-
+        
         if args.lower_dim <env.observation_space.shape[0]:
             state_dim = args.lower_dim
-            if env.name == "ReacherPyBulletEnv-v0":
+            running_state = ZFilter((state_dim,), clip=5)
+            if args.env_name == "ReacherPyBulletEnv-v0":
                 expert_traj = np.delete(expert_traj, [4,5,8], axis=1)
-            elif env.name == "Reacher-v2":
+            elif args.env_name == "Reacher-v2":
                 expert_traj = np.delete(expert_traj, [4,5,8,9,10], axis=1)
         else:
             state_dim = env.observation_space.shape[0]  

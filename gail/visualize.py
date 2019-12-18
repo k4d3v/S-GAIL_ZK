@@ -16,7 +16,7 @@ from utils.get_reacher_vars import get_exp
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_11dim.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail.p", metavar='G',
                     help='name of the model') # TODO: Relative path
 parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
@@ -35,7 +35,11 @@ env.seed(args.seed)
 if args.render: env.render(mode="human")
 torch.manual_seed(args.seed)
 
-policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
+# Load policy
+try:
+    policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
+except ValueError:  # Maybe more stuff was pickled (e.g. Discriminator for gail)
+    policy_net, _, _, running_state = pickle.load(open(args.model_path, "rb"))
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
 state_dim, action_dim, is_disc_action, _, _, _, state_max, state_min, action_max, action_min = get_exp(env, args)

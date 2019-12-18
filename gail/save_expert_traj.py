@@ -15,7 +15,7 @@ from utils import *
 parser = argparse.ArgumentParser(description='Save expert trajectory')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_11dim.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail.p", metavar='G',
                     help='name of the expert model') # TODO: Relative path
 parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
@@ -36,7 +36,12 @@ torch.manual_seed(args.seed)
 is_disc_action = len(env.action_space.shape) == 0
 state_dim = env.observation_space.shape[0]
 
-policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
+# Load policy
+try:
+    policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
+except ValueError:  # Maybe more stuff was pickled (e.g. Discriminator for gail)
+    policy_net, _, _, running_state = pickle.load(open(args.model_path, "rb"))
+
 expert_traj = []
 expert_traj0001, expert_traj0010, expert_traj0100, expert_traj1000 = [], [], [], []
 
