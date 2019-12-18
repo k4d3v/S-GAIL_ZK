@@ -22,10 +22,12 @@ parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
                     help='path of pre-trained model')
+parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
+                    help='Lower dimension. If value is smaller than dim of state, sgail will use states with dim=value (default: 10000)')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
-parser.add_argument('--log-std', type=float, default=-1.0, metavar='G',
-                    help='log std for the policy (default: -1.0)')
+parser.add_argument('--log-std', type=float, default=-0.0, metavar='G',
+                    help='log std for the policy (default: -0.0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
@@ -46,7 +48,7 @@ parser.add_argument('--max-iter-num', type=int, default=400, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='interval between training status logs (default: 10)')
-parser.add_argument('--save-model-interval', type=int, default=200, metavar='N',
+parser.add_argument('--save-model-interval', type=int, default=100, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
@@ -60,8 +62,9 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
-if args.env_name == "ReacherPyBulletEnv-v0":
-    state_dim = 6
+lower_dim = args.lower_dim < env.observation_space.shape[0]
+if lower_dim:
+    state_dim = args.lower_dim
     state_min, state_max = None, None
     action_min = env.action_space.low
     action_max = env.action_space.high
@@ -90,7 +93,7 @@ policy_net.to(device)
 value_net.to(device)
 
 """create agent"""
-agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads)
+agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 
 def update_params(batch):
@@ -123,7 +126,7 @@ def main_loop():
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net)
             pickle.dump((policy_net, value_net, running_state),
-                        open(os.path.join(assets_dir(), 'learned_models/{}_trpo.p'.format(args.env_name)), 'wb'))
+                        open(os.path.join(assets_dir(), 'learned_models/{}_trpo_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
             to_device(device, policy_net, value_net)
 
         """clean up gpu memory"""

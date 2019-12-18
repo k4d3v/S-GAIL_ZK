@@ -21,6 +21,8 @@ parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
                     help='path of pre-trained model')
+parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
+                    help='Lower dimension. If value is smaller than dim of state, sgail will use states with dim=value (default: 10000)')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--log-std', type=float, default=-0.0, metavar='G',
@@ -58,7 +60,9 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
-if args.env_name == "ReacherPyBulletEnv-v0":
+lower_dim = args.lower_dim < env.observation_space.shape[0]
+if lower_dim:
+    state_dim = args.lower_dim
     state_dim = 6
     state_min, state_max = None, None
     action_min = env.action_space.low
@@ -96,7 +100,7 @@ optim_epochs = 10
 optim_batch_size = 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads)
+agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim=)
 
 
 def update_params(batch, i_iter):
@@ -145,7 +149,7 @@ def main_loop():
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net)
             pickle.dump((policy_net, value_net, running_state),
-                        open(os.path.join(assets_dir(), 'learned_models/{}_ppo.p'.format(args.env_name)), 'wb'))
+                        open(os.path.join(assets_dir(), 'learned_models/{}_ppo_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
             to_device(device, policy_net, value_net)
 
         """clean up gpu memory"""

@@ -15,11 +15,11 @@ from utils import *
 parser = argparse.ArgumentParser(description='Save expert trajectory')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_full.p", metavar='G',
                     help='name of the expert model') # TODO: Relative path
 parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
-parser.add_argument('--render', action='store_true', default=True,
+parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
@@ -41,6 +41,7 @@ try:
     policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
 except ValueError:  # Maybe more stuff was pickled (e.g. Discriminator for gail)
     policy_net, _, _, running_state = pickle.load(open(args.model_path, "rb"))
+running_state.fix = True
 
 expert_traj = []
 expert_traj0001, expert_traj0010, expert_traj0100, expert_traj1000 = [], [], [], []

@@ -113,7 +113,7 @@ def main_loop():
 
         if args.save_model_interval > 0 and (i_iter + 1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
-            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_gail.p'.format(args.env_name)), 'wb'))
+            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_gail_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
             to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
@@ -134,6 +134,7 @@ if torch.cuda.is_available():
 
 """environment"""
 env = gym.make(args.env_name)
+lower_dim = args.lower_dim < env.observation_space.shape[0]
 
 """seeding"""
 np.random.seed(args.seed)
@@ -145,6 +146,7 @@ state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, st
 # 11250 11400 14600 12750
 expert_traj = expert_traj[:11250]
 encodes_d = encodes_d[:11250]
+running_state.fix = True
 
 """define actor and critic"""
 # Policy = Generator
@@ -172,7 +174,7 @@ optim_batch_size = 64  # 64
 
 """create agent"""
 agent = Agent(env, policy_net, device, custom_reward=gail_reward,
-              running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=args.lower_dim < env.observation_space.shape[0])
+              running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 # Finally do the learning
 main_loop()
