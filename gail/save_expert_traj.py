@@ -23,7 +23,7 @@ parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=50000, metavar='N',
+parser.add_argument('--max-expert-state-num', type=int, default=100000, metavar='N',
                     help='maximal number of main iterations (default: 50000)')
 args = parser.parse_args()
 
@@ -89,13 +89,13 @@ def main_loop():
             reward_episode += reward
             num_steps += 1
 
-            if t00:
+            if t00:  # Blue left
                 expert_traj0001.append(np.hstack([state, action]))
-            elif t01:
+            elif t01:  # White up
                 expert_traj0010.append(np.hstack([state, action]))
-            elif t10:
+            elif t10:  # White down
                 expert_traj0100.append(np.hstack([state, action]))
-            elif t11:
+            elif t11:  # Blue right
                 expert_traj1000.append(np.hstack([state, action]))
 
             if args.render:

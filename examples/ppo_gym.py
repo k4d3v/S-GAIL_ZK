@@ -21,7 +21,7 @@ parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
                     help='path of pre-trained model')
-parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
+parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. If value is smaller than dim of state, sgail will use states with dim=value (default: 10000)')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
@@ -100,7 +100,7 @@ optim_epochs = 10
 optim_batch_size = 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim=)
+agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 
 def update_params(batch, i_iter):

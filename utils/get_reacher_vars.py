@@ -10,7 +10,7 @@ def get_exp(env, args):
     is_disc_action = len(env.action_space.shape) == 0
     action_dim = 1 if is_disc_action else env.action_space.shape[0]
     try:
-        expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))
+        expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))  # Hopper: 50k trajs for one task!
         # running_reward = ZFilter((1,), demean=False, clip=10)
         encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
         
