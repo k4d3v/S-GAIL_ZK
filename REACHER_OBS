@@ -29,10 +29,10 @@ self.to_target_vec   # self.get_body_com("fingertip") - self.get_body_com("targe
 1 	cos(theta2)		
 2 	sin(theta1)		
 3 	sin(theta2) 		
-4 	qpos (the x coordinate of the target ) 		
-5 	qpos (the y coordinate of the target ) 		
-6 	qvel (the velocity of the fingertip in the x direction ) 		
-7 	qvel (the velocity of the fingertip in the y direction ) 		
+4 	qpos (the x position of first joint) 		
+5 	qpos (the y position of second joint) 		
+6 	qvel (the velocity of the fingertip in the x direction) 		
+7 	qvel (the velocity of the fingertip in the y direction) 		
 8 	the x-axis component of the vector from the target to the fingertip 		
 9 	the y-axis component of the vector from the target to the fingertip 		
 10 	the z-axis component of the vector from the target to the fingertip)
