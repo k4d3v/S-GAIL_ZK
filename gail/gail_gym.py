@@ -35,16 +35,14 @@ def sgail_reward(state, action, beta):
     """
     state_action = tensor(np.hstack([state, action]), dtype=dtype)
 
-    a = math.log(discrim_net(state_action)[0].item())
-    b = math.log(1 - discrim_net(state_action)[0].item())
-    d = policy_net(state)
-    c = beta * policy_net(state)[0].item()
+    #b = policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
+    #c = beta * b
 
     with torch.no_grad():
-        return math.log(discrim_net(state_action)[0].item()) \
-               - math.log(1 - discrim_net(state_action)[0].item()) \
-               + beta * math.log(policy_net(state_action[0].item()))
-        # TODO: Compute log(1-D) and beta*log(pi) (Discriminator should have a different output etc.)
+        return - math.log(discrim_net(state_action)[0].item()) \
+               + math.log(1 - discrim_net(state_action)[0].item()) \
+               - beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
+        # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
 
 
 def update_params(batch):
@@ -174,7 +172,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=gail_reward,
+agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 # Finally do the learning
