@@ -39,8 +39,9 @@ def sgail_reward(state, action, beta):
     #c = beta * b
 
     with torch.no_grad():
-        return - math.log(discrim_net(state_action)[0].item()) \
-               + math.log(1 - discrim_net(state_action)[0].item()) \
+        D = discrim_net(state_action)[0].item()
+        return - math.log(D) \
+               + math.log(1 - D) \
                #- beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
 
@@ -111,7 +112,7 @@ def main_loop():
 
         if args.save_model_interval > 0 and (i_iter + 1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
-            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_gail_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
+            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_sgail_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
             to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
@@ -149,10 +150,7 @@ running_state.fix = True
 
 """define actor and critic"""
 # Policy = Generator
-if is_disc_action:  # For gridworld
-    policy_net = DiscretePolicy(state_dim, env.action_space.n)
-else:  # For pyBullet
-    policy_net = Policy(state_dim, env.action_space.shape[0], log_std=args.log_std)
+policy_net = Policy(state_dim+(args.encode_dim if args.encode_dim>1 else 0), env.action_space.shape[0], log_std=args.log_std)
 
 # State value fun
 value_net = Value(state_dim)
