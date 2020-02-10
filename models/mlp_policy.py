@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch
 from utils.math import *
+from scipy.stats import multivariate_normal
+import numpy as np
 
 
 class Policy(nn.Module):
@@ -34,6 +36,10 @@ class Policy(nn.Module):
         self.action_log_std = nn.Parameter(torch.ones(1, action_dim) * log_std)
 
     def forward(self, x):
+        """
+        Arguments:
+            x [Tensor] -- state (1 x s_dim)
+        """
         for affine in self.affine_layers:
             x = self.activation(affine(x))
 
@@ -74,5 +80,18 @@ class Policy(nn.Module):
             param_count += param.view(-1).shape[0]
             id += 1
         return cov_inv.detach(), mean, {'std_id': std_id, 'std_index': std_index}
+    
+    def get_policy(self, se, action):
+        """
+        Returns a policy based on the task var for a given (s,a)
+        :param state: State-action vector
+        :param encode: Encoding based on current task
+        :return:
+        """
+        mu = self.forward(se)[0].cpu().detach().numpy().reshape(action.shape[0],)
 
+        sigma = [[np.exp(-3.0), 0.0], [0.0, np.exp(-3.0)]]  # TODO: Why?
 
+        policy = np.array([multivariate_normal.pdf(action, mu, sigma)])
+
+        return policy

@@ -11,7 +11,7 @@ import time
 
 def collect_samples(pid, queue, env, policy, custom_reward,
                     mean_action, render, running_state, min_batch_size, 
-                    s_min, s_max, a_min, a_max, beta, lower_dim):
+                    s_min, s_max, a_min, a_max, beta, lower_dim, encode_list):
     """
     Rollout for each thread
     @return: memory, log
@@ -28,8 +28,15 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     min_c_reward = 1e6
     max_c_reward = -1e6
     num_episodes = 0
-
+    is_encode = not (encode_list is None)
+    encode_dim = np.max(encode_list)+1 if is_encode else 0
+    
     while num_steps < min_batch_size:
+        if is_encode:
+            encode = np.zeros(encode_dim, dtype=np.float32)
+            encode[encode_list[num_episodes]] = 1
+
+        # TODO: Include task encoding
         state = env.reset()
         if lower_dim:
             if env_name == "ReacherPyBulletEnv-v0":
@@ -41,7 +48,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
         reward_episode = 0
 
         for t in range(10000):
-            state_var = tensor(state).unsqueeze(0)
+            astate = np.hstack((state, encode)) if is_encode else state
+            state_var = tensor(astate).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
                     action = policy(state_var)[0][0].numpy()
@@ -50,6 +58,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
             #action = norm_act(aaction, a_min, a_max) if a_min is not None else aaction
             next_state, reward, done, _ = env.step(action)
+            reward_episode += reward
+
             if lower_dim:
                 if env_name == "ReacherPyBulletEnv-v0":
                     next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8])
@@ -57,17 +67,24 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                     next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
             next_state = running_state(next_state)
 
-            reward_episode += reward
-
             if custom_reward is not None:
-                reward = custom_reward(state, action, beta)
+                # TODO: Combine state and encoding
+                if is_encode: 
+                    se = torch.from_numpy(np.hstack((state, encode)).reshape(1,-1))
+                    pol = policy.get_policy(se, action)
+                    reward = custom_reward(state, action, encode, pol, beta) 
+                else:
+                    reward = custom_reward(state, action, beta=beta)
                 total_c_reward += reward
                 min_c_reward = min(min_c_reward, reward)
                 max_c_reward = max(max_c_reward, reward)
 
             mask = 0 if done else 1
 
-            memory.push(state, action, mask, next_state, reward)
+            if encode_list is not None:
+                memory.push(state, action, mask, next_state, reward, encode, pol)
+            else:
+                memory.push(state, action, mask, next_state, reward, None, None)
 
             if render:
                 env.render()
@@ -136,7 +153,7 @@ class Agent:
         self.num_threads = num_threads
 
     def collect_samples(self, min_batch_size,
-                        state_min=None, state_max=None, a_min=None, a_max=None, beta=None):
+                        state_min=None, state_max=None, a_min=None, a_max=None, beta=None, encode_list=None):
         """
         Parallelized version of rollout. Each worker calls outer fun
         """
@@ -154,7 +171,7 @@ class Agent:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max, beta, self.lower_dim)
+                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max, beta, self.lower_dim, encode_list)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)

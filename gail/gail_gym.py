@@ -33,16 +33,16 @@ def sgail_reward(state, action, beta):
     """
     Reward based on Discriminator and Generator net output as described in SGAIL
     """
+    # TODO: Fix
     state_action = tensor(np.hstack([state, action]), dtype=dtype)
-
-    #b = policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
-    #c = beta * b
-
+    
     with torch.no_grad():
-        return - math.log(discrim_net(state_action)[0].item()) \
-               + math.log(1 - discrim_net(state_action)[0].item()) \
-               #- beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
+        return -( math.log(discrim_net(state_action)[0].item()) \
+               - math.log(1 - discrim_net(state_action)[0].item()) \
+               + beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
+        
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
+        # Entropy regularization term
 
 
 def update_params(batch):
@@ -106,6 +106,7 @@ def main_loop():
         t1 = time.time()
 
         if i_iter % args.log_interval == 0:
+            print("beta: ", beta)
             print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
                 i_iter, log['sample_time'], t1 - t0, log['avg_c_reward'], log['avg_reward']))
 

@@ -20,56 +20,62 @@ from core.common import estimate_advantages
 from core.agent import Agent
 
 
-def gail_reward(state, action, beta):
+def gail_reward(state, action, encode=[], policy=[], beta=None):
     """
     Reward based on Discriminator net output as described in GAIL
     """
-    state_action = tensor(np.hstack([state, action]), dtype=dtype)
+    saep = tensor(np.hstack((state, action, encode, policy)), dtype=dtype)
     with torch.no_grad():
-        return -math.log(discrim_net(state_action)[0].item())
+        return -math.log(discrim_net(saep)[0].item())
 
 
-def sgail_reward(state, action, beta):
+def sgail_reward(state, action, encode=[], policy=[], beta=None):
     """
     Reward based on Discriminator and Generator net output as described in SGAIL
     """
+    # TODO: Fix
     state_action = tensor(np.hstack([state, action]), dtype=dtype)
-
-    #b = policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
-    #c = beta * b
-
+    
     with torch.no_grad():
-        D = discrim_net(state_action)[0].item()
-        return - math.log(D) \
-               + math.log(1 - D) \
-               #- beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item()
+        return -( math.log(discrim_net(state_action)[0].item()) \
+               - math.log(1 - discrim_net(state_action)[0].item()) \
+               + beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
+        
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
-
+        # Entropy regularization term
 
 def update_params(batch):
     states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
     actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
     rewards = torch.from_numpy(np.stack(batch.reward)).to(dtype).to(device)
     masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
+    g_encodes = torch.from_numpy(np.stack(batch.encode)).to(dtype).to(device)
+    policies = torch.from_numpy(np.stack(batch.policy)).to(dtype).to(device)
+
+    g_states_encodes = torch.cat((states, g_encodes), dim=1)
+
     with torch.no_grad():
-        values = value_net(states)
-        fixed_log_probs = policy_net.get_log_prob(states, actions)
+        values = value_net(g_states_encodes)
+        fixed_log_probs = policy_net.get_log_prob(g_states_encodes, actions)
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
     """update discriminator using optimizer"""
     for _ in range(1):
-        expert_state_actions = torch.from_numpy(expert_traj).to(dtype).to(device)
-        g_o = discrim_net(torch.cat([states, actions], 1))
-        e_o = discrim_net(expert_state_actions)
+        expert_full = torch.from_numpy(expert_traj).to(dtype).to(device)  # s,a,e,p
+        # TODO: There are less samples from G than from expert! Maybe bad for classifier
+        g_o = discrim_net(torch.cat([states, actions, g_encodes, policies], 1))  # Classify states that were generated (Label: 1)
+        e_o = discrim_net(expert_full)  # Classify states from expert (Label: 0)
         optimizer_discrim.zero_grad()
+        # Compare D output and real labels
         discrim_loss = discrim_criterion(g_o, ones((states.shape[0], 1), device=device)) + \
                        discrim_criterion(e_o, zeros((expert_traj.shape[0], 1), device=device))
         discrim_loss.backward()
         optimizer_discrim.step()
 
     """perform mini-batch PPO update on G and V"""
+    # TODO: Fix (Idea: Use state+encode)
     optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
     for _ in range(optim_epochs):
         perm = np.arange(states.shape[0])
@@ -89,12 +95,16 @@ def update_params(batch):
 
 
 def main_loop():
+    # Labels for sampled trajectories
+    encode_labels = [tuple(range(encode_dim)) for _ in range(encodes.shape[0])]
+    encode_labels = list(np.array(encode_labels).flatten())
+
     beta = args.beta
     delta_beta = -args.w
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
-        batch, log = agent.collect_samples(args.min_batch_size, state_min, state_max, action_min, action_max, beta)
+        batch, log = agent.collect_samples(args.min_batch_size, state_min, state_max, action_min, action_max, beta, encode_list=encode_labels)
         discrim_net.to(device)
 
         t0 = time.time()
@@ -107,6 +117,7 @@ def main_loop():
         t1 = time.time()
 
         if i_iter % args.log_interval == 0:
+            print("beta: ", beta)
             print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
                 i_iter, log['sample_time'], t1 - t0, log['avg_c_reward'], log['avg_reward']))
 
@@ -141,22 +152,22 @@ torch.manual_seed(args.seed)
 env.seed(args.seed)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
-state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
+state_dim, action_dim, is_disc_action, expert_sa, running_state, encodes, state_max, state_min, action_max, action_min = get_exp(env, args)
 # 11250 11400 14600 12750 (50k)
 # 24450 24250 27300 24000 (100k)
-expert_traj = expert_traj[:24450]
-encodes_d = encodes_d[:24450]
 running_state.fix = True
+encode_dim = encodes.shape[1]
 
 """define actor and critic"""
+edim = args.encode_dim if args.encode_dim > 1 else 0
 # Policy = Generator
-policy_net = Policy(state_dim+(args.encode_dim if args.encode_dim>1 else 0), env.action_space.shape[0], log_std=args.log_std)
+policy_net = Policy(state_dim+edim, env.action_space.shape[0], log_std=args.log_std)
 
 # State value fun
-value_net = Value(state_dim)
+value_net = Value(state_dim, hidden_size=(128, 32), encode_dim=edim)
 
 # Discriminator
-discrim_net = Discriminator(state_dim + action_dim)
+discrim_net = Discriminator(state_dim + action_dim + edim + 1)  # s,a,e,p
 discrim_criterion = nn.BCELoss()
 to_device(device, policy_net, value_net, discrim_net, discrim_criterion)
 
@@ -170,8 +181,18 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
+agent = Agent(env, policy_net, device, custom_reward=gail_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
-# Finally do the learning
+
+"""Glue together expert trajs (s,a,e,p)"""
+# Get policy from expert data
+# Dimension: s,a,e,p
+expert_traj = np.zeros((expert_sa.shape[0], state_dim+action_dim+encode_dim+1))
+for t in range(expert_sa.shape[0]):
+    se = torch.from_numpy(np.hstack((expert_sa[t][:state_dim], encodes[t])).reshape(1,-1)).to(dtype).to(device)
+    pol = policy_net.get_policy(se, expert_sa[t][state_dim:])
+    expert_traj[t] = np.hstack((expert_sa[t],encodes[t],pol))
+
+"""Finally do the learning"""
 main_loop()

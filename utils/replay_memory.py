@@ -5,7 +5,7 @@ import random
 # https://github.com/pytorch/tutorials/blob/master/Reinforcement%20(Q-)Learning%20with%20PyTorch.ipynb
 
 Transition = namedtuple('Transition', ('state', 'action', 'mask', 'next_state',
-                                       'reward'))
+                                       'reward', 'encode', 'policy'))
 
 
 class Memory(object):
@@ -15,7 +15,7 @@ class Memory(object):
     def push(self, *args):
         """Saves a transition."""
         self.memory.append(Transition(*args))
-
+        
     def sample(self, batch_size=None):
         if batch_size is None:
             return Transition(*zip(*self.memory))

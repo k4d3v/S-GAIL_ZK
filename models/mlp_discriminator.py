@@ -1,10 +1,12 @@
 import torch.nn as nn
 import torch
+import numpy as np
 
 
 class Discriminator(nn.Module):
-    def __init__(self, num_inputs, hidden_size=(128, 128), activation='tanh'):
+    def __init__(self, num_inputs, hidden_size=(128, 128), activation='tanh', enc_dim=0):
         super().__init__()
+        self.enc_dim = enc_dim
         if activation == 'tanh':
             self.activation = torch.tanh
         elif activation == 'relu':
@@ -27,4 +29,13 @@ class Discriminator(nn.Module):
             x = self.activation(affine(x))
 
         prob = torch.sigmoid(self.logic(x))
-        return prob
+        
+        if self.enc_dim < 2:
+            return prob
+        else:
+            # Extract policy from sample
+            p = x[-1:]
+            eprob = np.exp(prob.detach().numpy())
+            # See eq.5 in SGAIL paper
+            return eprob/(eprob+p)
+    

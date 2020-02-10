@@ -34,13 +34,13 @@ def prep_parser():
                         help='minimal batch size per PPO update (default: 2048)')
     parser.add_argument('--max-iter-num', type=int, default=2000, metavar='N',
                         help='maximal number of main iterations (default: 500)')
-    parser.add_argument('--log-interval', type=int, default=50, metavar='N',
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 2)')
-    parser.add_argument('--save-model-interval', type=int, default=100, metavar='N',
+    parser.add_argument('--save-model-interval', type=int, default=50, metavar='N',
                         help="interval between saving model (default: 0, means don't save)")
     parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
     # Args for SGAIL: Beta and beta change, encode_dim
-    parser.add_argument('--encode_dim', type=int, default=1, metavar='N',
+    parser.add_argument('--encode_dim', type=int, default=4, metavar='N',
                     help='Number of demo classes.')
     parser.add_argument("--beta", type=float, default=.9,
                         help="Entropy correction (default in S-GAIL paper: 0.9)")

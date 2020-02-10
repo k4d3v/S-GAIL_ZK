@@ -23,8 +23,8 @@ parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=100000, metavar='N',
-                    help='maximal number of main iterations (default: 50000)')
+parser.add_argument('--max-expert-state-num', type=int, default=20000, metavar='N',
+                    help='maximal number of main iterations (default: 100000)')
 args = parser.parse_args()
 
 dtype = torch.float64
@@ -124,7 +124,7 @@ expert_traj = np.concatenate(
 # Encode class
 encode = np.concatenate((np.array([(0,0,0,1)]*expert_traj0001.shape[0]),
                         np.array([(0,0,1,0)]*expert_traj0010.shape[0]),
-                        np.array([(0,1,0,0)]*expert_traj0010.shape[0]),
+                        np.array([(0,1,0,0)]*expert_traj0100.shape[0]),
                         np.array([(1,0,0,0)]*expert_traj1000.shape[0])), axis=0)
 # Save trajs and encodes
 pickle.dump((expert_traj, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_expert_traj.p'.format(args.env_name)), 'wb'))
