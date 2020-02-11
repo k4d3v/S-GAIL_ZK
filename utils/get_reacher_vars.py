@@ -14,7 +14,7 @@ def get_exp(env, args):
         # running_reward = ZFilter((1,), demean=False, clip=10)
         encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
         
-        if args.lower_dim <env.observation_space.shape[0]:
+        if args.lower_dim < env.observation_space.shape[0]:
             state_dim = args.lower_dim
             running_state = ZFilter((state_dim,), clip=5)
             if args.env_name == "ReacherPyBulletEnv-v0":
@@ -27,7 +27,7 @@ def get_exp(env, args):
     # Expert trajs are not needed
     except AttributeError:
         expert_traj, running_state, encodes_d = None, None, None
-        state_dim = args.lower_dim if args.lower_dim <env.observation_space.shape[0] else env.observation_space.shape[0]  
+        state_dim = args.lower_dim if args.lower_dim < env.observation_space.shape[0] else env.observation_space.shape[0]  
 
     state_max, state_min, action_max, action_min = None, None, env.action_space.high, env.action_space.low
 

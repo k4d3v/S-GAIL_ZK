@@ -39,8 +39,8 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
     
     with torch.no_grad():
         return -( math.log(discrim_net(state_action)[0].item()) \
-               - math.log(1 - discrim_net(state_action)[0].item()) \
-               + beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
+               - math.log(1 - discrim_net(state_action)[0].item()) )
+               #+ beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
         
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
@@ -97,7 +97,7 @@ def update_params(batch):
 
 def main_loop():
     rew_expert, rew_system = [], []
-    
+
     # Labels for sampled trajectories
     encode_labels = [tuple(range(encode_dim)) for _ in range(encodes.shape[0])]
     encode_labels = list(np.array(encode_labels).flatten())

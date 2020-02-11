@@ -16,7 +16,7 @@ from utils.get_reacher_vars import get_exp
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_full.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_sgail_full.p", metavar='G',
                     help='name of the model') # TODO: Relative path
 parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
@@ -43,6 +43,7 @@ except ValueError:  # Maybe more stuff was pickled (e.g. Discriminator for gail)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
 state_dim, action_dim, is_disc_action, _, _, _, state_max, state_min, action_max, action_min = get_exp(env, args)
+is_encode = state_dim < policy_net.affine_layers[0].in_features
 
 # TODO: Show traj only if class 1
 def main_loop():
@@ -59,10 +60,15 @@ def main_loop():
         t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
         t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
         t11 = np.linalg.norm(target_pose-[pos,pos])<dist
+        #if not (t00 or t01 or t10 or t11): 
         if not (t00 or t01 or t10 or t11): 
             #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate
         
+        # SGAIL agent
+        if is_encode:
+            encode = [0,0,0,1] if t00 else [0,0,1,0] if t01 else [0,1,0,0] if t10 else [1,0,0,0]
+
         if args.lower_dim == 6 and args.env_name == "ReacherPyBulletEnv-v0":
             state = np.delete(copy.copy(state), [4, 5, 8]) 
         elif args.lower_dim == 6 and args.env_name == "Reacher-v2":
@@ -71,6 +77,8 @@ def main_loop():
         reward_episode = 0
         
         for t in range(10000):
+            if is_encode:
+                state = np.hstack((state, encode))
             state_var = tensor(state).unsqueeze(0).to(dtype)
             # choose mean action
             action = policy_net(state_var)[0][0].detach().numpy()
