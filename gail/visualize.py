@@ -53,8 +53,14 @@ def main_loop():
 
         # Determine target and current demo class
         target_pose = env.env.robot.target.pose().xyz()[:2]
-        t01 = np.linalg.norm(target_pose-[-0.15,-0.15])<0.005
-        if not t01: 
+        pos = 0.15
+        dist = 0.005
+        t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
+        t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
+        t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
+        t11 = np.linalg.norm(target_pose-[pos,pos])<dist
+        if not (t00 or t01 or t10 or t11): 
+            #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate
         
         if args.lower_dim == 6 and args.env_name == "ReacherPyBulletEnv-v0":
@@ -62,7 +68,6 @@ def main_loop():
         elif args.lower_dim == 6 and args.env_name == "Reacher-v2":
             state = np.delete(copy.copy(state), [4, 5, 8, 9, 10])
         state = running_state(state)
-        
         reward_episode = 0
         
         for t in range(10000):

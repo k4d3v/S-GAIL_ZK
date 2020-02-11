@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
 from utils.get_reacher_vars import get_exp
+from utils.plot_rewards import plot_r
 from arg_parser import prep_parser
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
@@ -76,25 +77,27 @@ def update_params(batch):
 
     """perform mini-batch PPO update on G and V"""
     # TODO: Fix (Idea: Use state+encode)
-    optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
+    optim_iter_num = int(math.ceil(g_states_encodes.shape[0] / optim_batch_size))
     for _ in range(optim_epochs):
-        perm = np.arange(states.shape[0])
+        perm = np.arange(g_states_encodes.shape[0])
         np.random.shuffle(perm)
         perm = LongTensor(perm).to(device)
 
-        states, actions, returns, advantages, fixed_log_probs = \
-            states[perm].clone(), actions[perm].clone(), returns[perm].clone(), advantages[perm].clone(), fixed_log_probs[perm].clone()
+        g_states_encodes, actions, returns, advantages, fixed_log_probs = \
+            g_states_encodes[perm].clone(), actions[perm].clone(), returns[perm].clone(), advantages[perm].clone(), fixed_log_probs[perm].clone()
 
         for i in range(optim_iter_num):
-            ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))
-            states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
-                states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
+            ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, g_states_encodes.shape[0]))
+            g_states_encodes_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
+                g_states_encodes[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
 
-            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
+            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, g_states_encodes_b, actions_b, returns_b,
                      advantages_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
 
 
 def main_loop():
+    rew_expert, rew_system = [], []
+    
     # Labels for sampled trajectories
     encode_labels = [tuple(range(encode_dim)) for _ in range(encodes.shape[0])]
     encode_labels = list(np.array(encode_labels).flatten())
@@ -115,6 +118,9 @@ def main_loop():
 
         """Printing and saving"""
         t1 = time.time()
+        rew_expert.append(log['avg_c_reward'])
+        rew_system.append(log['avg_reward'])
+
 
         if i_iter % args.log_interval == 0:
             print("beta: ", beta)
@@ -129,6 +135,7 @@ def main_loop():
         """clean up gpu memory"""
         torch.cuda.empty_cache()
 
+    return rew_expert, rew_system
 
 ### Starting main procedures
 
@@ -153,8 +160,6 @@ env.seed(args.seed)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
 state_dim, action_dim, is_disc_action, expert_sa, running_state, encodes, state_max, state_min, action_max, action_min = get_exp(env, args)
-# 11250 11400 14600 12750 (50k)
-# 24450 24250 27300 24000 (100k)
 running_state.fix = True
 encode_dim = encodes.shape[1]
 
@@ -194,5 +199,9 @@ for t in range(expert_sa.shape[0]):
     pol = policy_net.get_policy(se, expert_sa[t][state_dim:])
     expert_traj[t] = np.hstack((expert_sa[t],encodes[t],pol))
 
-"""Finally do the learning"""
-main_loop()
+# Finally do the learning
+re, rs = main_loop()
+
+# Plot results
+plot_r(re, "Expert", args.env_name)
+plot_r(rs, "Environment", args.env_name)

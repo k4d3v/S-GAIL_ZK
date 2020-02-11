@@ -8,7 +8,8 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
-from utils.get_reacher_vars import get_exp
+from utils.get_reacher_vars import get_exp 
+from utils.plot_rewards import plot_r
 from arg_parser import prep_parser
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
@@ -37,9 +38,9 @@ def sgail_reward(state, action, beta):
     state_action = tensor(np.hstack([state, action]), dtype=dtype)
     
     with torch.no_grad():
-        return -( math.log(discrim_net(state_action)[0].item()) \
-               - math.log(1 - discrim_net(state_action)[0].item()) \
-               + beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
+        return - math.log(discrim_net(state_action)[0].item()) \
+               + math.log(1 - discrim_net(state_action)[0].item()) \
+               #- beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
         
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
@@ -88,6 +89,8 @@ def update_params(batch):
 
 
 def main_loop():
+    rew_expert, rew_system = [], []
+
     beta = args.beta
     delta_beta = -args.w
     for i_iter in range(args.max_iter_num):
@@ -104,6 +107,8 @@ def main_loop():
 
         """Printing and saving"""
         t1 = time.time()
+        rew_expert.append(log['avg_c_reward'])
+        rew_system.append(log['avg_reward'])
 
         if i_iter % args.log_interval == 0:
             print("beta: ", beta)
@@ -117,6 +122,8 @@ def main_loop():
 
         """clean up gpu memory"""
         torch.cuda.empty_cache()
+
+    return rew_expert, rew_system
 
 
 ### Starting main procedures
@@ -142,10 +149,12 @@ env.seed(args.seed)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
 state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
+# 2400 1900 2250 3450 (10k)
+# 4500 4350 5150 6000 (20k)
 # 11250 11400 14600 12750 (50k)
 # 24450 24250 27300 24000 (100k)
-expert_traj = expert_traj[:24450]
-encodes_d = encodes_d[:24450]
+expert_traj = expert_traj[:2400]
+encodes_d = encodes_d[:2400]
 running_state.fix = True
 
 """define actor and critic"""
@@ -177,4 +186,8 @@ agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 # Finally do the learning
-main_loop()
+re, rs = main_loop()
+
+# Plot results
+plot_r(re, "Expert", args.env_name)
+plot_r(rs, "Environment", args.env_name)

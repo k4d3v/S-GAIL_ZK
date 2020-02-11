@@ -23,7 +23,7 @@ parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=20000, metavar='N',
+parser.add_argument('--max-expert-state-num', type=int, default=10000, metavar='N',
                     help='maximal number of main iterations (default: 100000)')
 args = parser.parse_args()
 
