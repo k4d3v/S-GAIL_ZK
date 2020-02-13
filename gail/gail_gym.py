@@ -95,7 +95,7 @@ def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
-        batch, log = agent.collect_samples(args.min_batch_size, state_min, state_max, action_min, action_max, beta)
+        batch, log = agent.collect_samples(args.min_batch_size, beta)
         discrim_net.to(device)
 
         t0 = time.time()
@@ -111,12 +111,13 @@ def main_loop():
 
         if i_iter % args.log_interval == 0:
             print("beta: ", beta)
+            print('Num goals: {}\tReached goals: {}'.format(log['goals'], log['reached_goals']))
             print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
                 i_iter, log['sample_time'], t1 - t0, log['avg_c_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter + 1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
-            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_gail_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
+            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_gail_{}_{}.p'.format(args.env_name, "comp" if lower_dim else "full", str(i_iter+1))), 'wb'))
             to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
@@ -147,7 +148,7 @@ torch.manual_seed(args.seed)
 env.seed(args.seed)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
-state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d, state_max, state_min, action_max, action_min = get_exp(env, args)
+state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d = get_exp(env, args)
 # 2400 1900 2250 3450 (10k)
 # 4500 4350 5150 6000 (20k)
 # 11250 11400 14600 12750 (50k)

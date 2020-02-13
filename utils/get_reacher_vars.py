@@ -27,8 +27,5 @@ def get_exp(env, args):
         expert_traj, running_state, encodes_d = None, None, None
         state_dim = args.lower_dim if args.lower_dim < env.observation_space.shape[0] else env.observation_space.shape[0]  
 
-    state_max, state_min, action_max, action_min = None, None, env.action_space.high, env.action_space.low
-
     return (state_dim, action_dim, is_disc_action,
-            expert_traj, running_state, encodes_d,
-            state_max, state_min, action_max, action_min)
+            expert_traj, running_state, encodes_d)

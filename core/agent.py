@@ -11,7 +11,7 @@ import time
 
 def collect_samples(pid, queue, env, policy, custom_reward,
                     mean_action, render, running_state, min_batch_size, 
-                    s_min, s_max, a_min, a_max, beta, lower_dim, encode_list):
+                    beta, lower_dim, encode_list):
     """
     Rollout for each thread
     @return: memory, log
@@ -28,8 +28,10 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     min_c_reward = 1e6
     max_c_reward = -1e6
     num_episodes = 0
+
     is_encode = not (encode_list is None)
     encode_dim = np.max(encode_list)+1 if is_encode else 0
+    goals, reached = 0, 0
     
     while num_steps < min_batch_size:
         if is_encode:
@@ -41,9 +43,9 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
         if lower_dim:
             if env_name == "ReacherPyBulletEnv-v0":
-                state = delete(copy.copy(state), s_min, s_max) if s_min is not None else np.delete(copy.copy(state), [4, 5, 8])
+                state = np.delete(copy.copy(state), [4, 5, 8])
             elif env_name == "Reacher-v2":
-                state = delete(copy.copy(state), s_min, s_max) if s_min is not None else np.delete(copy.copy(state), [4, 5, 8, 9, 10])
+                state = np.delete(copy.copy(state), [4, 5, 8, 9, 10])
         
         reward_episode = 0
 
@@ -64,12 +66,11 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
             if lower_dim:
                 if env_name == "ReacherPyBulletEnv-v0":
-                    next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8])
+                    next_state = np.delete(copy.copy(next_state), [4, 5, 8])
                 elif env_name == "Reacher-v2":
-                    next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
+                    next_state = np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
             
             if custom_reward is not None:
-                # TODO: Combine state and encoding
                 if is_encode: 
                     se = torch.from_numpy(np.hstack((state, encode)).reshape(1,-1))
                     pol = policy.get_policy(se, action)
@@ -94,6 +95,26 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
             state = next_state
 
+        if custom_reward is not None:
+            # Determine target
+            target_pose = env.env.robot.target.pose().xyz()[:2]
+            pos = 0.15
+            dist = 0.005
+            t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
+            t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
+            t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
+            t11 = np.linalg.norm(target_pose-[pos,pos])<dist
+            
+            agoal = t00
+
+            finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
+            # Look if goal was reached
+            if agoal and np.linalg.norm(target_pose - finger_pose) < dist:
+                goals+=1
+                reached+=1
+            elif agoal:
+                goals+=1
+
         # log stats
         num_steps += (t + 1)
         num_episodes += 1
@@ -112,6 +133,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
         log['avg_c_reward'] = total_c_reward / num_steps
         log['max_c_reward'] = max_c_reward
         log['min_c_reward'] = min_c_reward
+        log['goals'] = goals
+        log['reached_goals'] = reached
 
     if queue is not None:
         queue.put([pid, memory, log])
@@ -153,8 +176,7 @@ class Agent:
         self.lower_dim = lower_dim
         self.num_threads = num_threads
 
-    def collect_samples(self, min_batch_size,
-                        state_min=None, state_max=None, a_min=None, a_max=None, beta=None, encode_list=None):
+    def collect_samples(self, min_batch_size, beta=None, encode_list=None):
         """
         Parallelized version of rollout. Each worker calls outer fun
         """
@@ -172,7 +194,7 @@ class Agent:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, thread_batch_size, state_min, state_max, a_min, a_max, beta, self.lower_dim, encode_list)
+                                      self.render, self.running_state, thread_batch_size, beta, self.lower_dim, encode_list)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)
