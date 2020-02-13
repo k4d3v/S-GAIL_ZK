@@ -10,7 +10,7 @@ def prep_parser():
                         help='name of the environment to run, default: Hopper-v2')
     parser.add_argument('--expert-traj-path', default="/home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_", metavar='G',
                         help='path of the expert trajectories (Reacher: /home/developer/S-GAIL_ZK/assets/expert_traj/ReacherPyBulletEnv-v0_)')
-    parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
+    parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
                     help='Lower dimension. If value is smaller than dim of state, sgail will use states with dim=value (default: 10000)')
     parser.add_argument('--render', action='store_true', default=False,
                         help='render the environment')
@@ -32,7 +32,7 @@ def prep_parser():
                         help='random seed (default: 1)')
     parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
                         help='minimal batch size per PPO update (default: 2048)')
-    parser.add_argument('--max-iter-num', type=int, default=2000, metavar='N',
+    parser.add_argument('--max-iter-num', type=int, default=1000, metavar='N',
                         help='maximal number of main iterations (default: 5000)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 2)')
@@ -44,6 +44,6 @@ def prep_parser():
                     help='Number of demo classes.')
     parser.add_argument("--beta", type=float, default=.9,
                         help="Entropy correction (default in S-GAIL paper: 0.9)")
-    parser.add_argument("--w", type=float, default=1e-3,
+    parser.add_argument("--w", type=float, default=1e-4,
                         help="Scheduling param for beta (default: 1e-3)")
     return parser.parse_args()

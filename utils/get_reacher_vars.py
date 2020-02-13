@@ -5,18 +5,16 @@ from utils import *
 
 
 def get_exp(env, args):
-    # load trajectory from expert
-    # TODO: Is running state needed?
     is_disc_action = len(env.action_space.shape) == 0
     action_dim = 1 if is_disc_action else env.action_space.shape[0]
     try:
+        # load trajectory from expert
         expert_traj, running_state = pickle.load(open(args.expert_traj_path+"expert_traj.p", "rb"))  # Hopper: 50k trajs for one task!
         # running_reward = ZFilter((1,), demean=False, clip=10)
         encodes_d = pickle.load(open(args.expert_traj_path+"encode.p", "rb"))
         
         if args.lower_dim < env.observation_space.shape[0]:
             state_dim = args.lower_dim
-            running_state = ZFilter((state_dim,), clip=5)
             if args.env_name == "ReacherPyBulletEnv-v0":
                 expert_traj = np.delete(expert_traj, [4,5,8], axis=1)
             elif args.env_name == "Reacher-v2":

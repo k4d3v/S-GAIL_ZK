@@ -36,10 +36,9 @@ def sgail_reward(state, action, beta):
     """
     # TODO: Fix
     state_action = tensor(np.hstack([state, action]), dtype=dtype)
-    
     with torch.no_grad():
         return - math.log(discrim_net(state_action)[0].item()) \
-               + math.log(1 - discrim_net(state_action)[0].item()) \
+               + math.log(1 - discrim_net(state_action)[0].item())
                #- beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
         
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)

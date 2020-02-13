@@ -36,15 +36,15 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             encode = np.zeros(encode_dim, dtype=np.float32)
             encode[encode_list[num_episodes]] = 1
 
-        # TODO: Include task encoding
         state = env.reset()
+        state = running_state(state)
+
         if lower_dim:
             if env_name == "ReacherPyBulletEnv-v0":
                 state = delete(copy.copy(state), s_min, s_max) if s_min is not None else np.delete(copy.copy(state), [4, 5, 8])
             elif env_name == "Reacher-v2":
                 state = delete(copy.copy(state), s_min, s_max) if s_min is not None else np.delete(copy.copy(state), [4, 5, 8, 9, 10])
-        state = running_state(state)
-
+        
         reward_episode = 0
 
         for t in range(10000):
@@ -60,13 +60,14 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             next_state, reward, done, _ = env.step(action)
             reward_episode += reward
 
+            next_state = running_state(next_state)
+
             if lower_dim:
                 if env_name == "ReacherPyBulletEnv-v0":
                     next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8])
                 elif env_name == "Reacher-v2":
                     next_state = delete(copy.copy(next_state), s_min, s_max) if s_min is not None else np.delete(copy.copy(next_state), [4, 5, 8, 9, 10])
-            next_state = running_state(next_state)
-
+            
             if custom_reward is not None:
                 # TODO: Combine state and encoding
                 if is_encode: 
@@ -81,7 +82,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
             mask = 0 if done else 1
 
-            if encode_list is not None:
+            if is_encode:
                 memory.push(state, action, mask, next_state, reward, encode, pol)
             else:
                 memory.push(state, action, mask, next_state, reward, None, None)

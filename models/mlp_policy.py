@@ -89,9 +89,7 @@ class Policy(nn.Module):
         :return:
         """
         mu = self.forward(se)[0].cpu().detach().numpy().reshape(action.shape[0],)
-
         sigma = [[np.exp(-3.0), 0.0], [0.0, np.exp(-3.0)]]  # TODO: Why?
-
         policy = np.array([multivariate_normal.pdf(action, mu, sigma)])
 
         return policy
