@@ -21,7 +21,7 @@ def run_and_plot(args):
 
     # Iterate over all models
     reached_rel = []
-    iters_list = range(50, 501, 50)
+    iters_list = range(50, 301, 50)
     for iters in iters_list:
         print("Current model trained for "+str(iters)+" iterations")
 
@@ -36,7 +36,7 @@ def run_and_plot(args):
 
         # Perform 10 episodes
         i_episode = 0
-        while i_episode<10:
+        while i_episode<20:
             state = env.reset()
             state = running_state(state)
 

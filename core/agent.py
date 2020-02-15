@@ -8,10 +8,12 @@ from utils.torch import *
 import math
 import time
 
+from gail.estimate_target import targets
+
 
 def collect_samples(pid, queue, env, policy, custom_reward,
                     mean_action, render, running_state, min_batch_size, 
-                    beta, lower_dim, encode_list):
+                    beta, lower_dim, encode_list, targets_est=False):
     """
     Rollout for each thread
     @return: memory, log
@@ -34,12 +36,21 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     goals, reached = 0, 0
     
     while num_steps < min_batch_size:
+        state = env.reset()
+        state = running_state(state)
+
+        if targets_est:
+            # Determine target and current demo class
+            target_pose = env.env.robot.target.pose().xyz()[:2]
+            t00, t01, t10, t11 = targets(target_pose)
+            if not (t00): 
+            #if not (t00 or t01 or t10 or t11): 
+                #print("Goal not accepted")
+                continue  # Skip following lines if cordinates alternate
+            
         if is_encode:
             encode = np.zeros(encode_dim, dtype=np.float32)
             encode[encode_list[num_episodes]] = 1
-
-        state = env.reset()
-        state = running_state(state)
 
         if lower_dim:
             if env_name == "ReacherPyBulletEnv-v0":
@@ -161,11 +172,12 @@ def merge_log(log_list):
 
 class Agent:
 
-    def __init__(self, env, policy, device, custom_reward=None,
+    def __init__(self, env, policy, device, custom_reward=None, targets=False,
                  mean_action=False, render=False, running_state=None, lower_dim=False, num_threads=1):
         """
         @param num_threads: More than one means parallel execution when collecting samples
         """
+        self.targets = targets
         self.env = env
         self.policy = policy
         self.device = device
@@ -194,7 +206,7 @@ class Agent:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, thread_batch_size, beta, self.lower_dim, encode_list)
+                                      self.render, self.running_state, thread_batch_size, beta, self.lower_dim, encode_list, targets_est=self.targets)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)

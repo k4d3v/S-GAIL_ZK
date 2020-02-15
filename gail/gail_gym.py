@@ -182,7 +182,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=gail_reward,
+agent = Agent(env, policy_net, device, custom_reward=gail_reward, targets=True,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 # Finally do the learning
