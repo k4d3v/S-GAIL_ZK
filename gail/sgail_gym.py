@@ -41,8 +41,6 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
                - math.log(1 - discrim_net(saep)[0].item()) 
                + beta*math.log(policy[0]+ 1e-10)
                )
-               #+ beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
-        
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
 
@@ -187,7 +185,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
+agent = Agent(env, policy_net, device, custom_reward=sgail_reward, targets=True,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 

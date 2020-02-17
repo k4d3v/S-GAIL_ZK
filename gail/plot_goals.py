@@ -14,6 +14,7 @@ from itertools import count
 from utils import *
 
 from utils.plot_rewards import plot_reached
+from estimate_target import targets
 
 
 def run_and_plot(args):
@@ -21,7 +22,7 @@ def run_and_plot(args):
 
     # Iterate over all models
     reached_rel = []
-    iters_list = range(50, 301, 50)
+    iters_list = range(10, 501, 10)
     for iters in iters_list:
         print("Current model trained for "+str(iters)+" iterations")
 
@@ -34,7 +35,7 @@ def run_and_plot(args):
         num_steps = 0
         goals, reached = 0,0
 
-        # Perform 10 episodes
+        # Perform 20 episodes
         i_episode = 0
         while i_episode<20:
             state = env.reset()
@@ -42,16 +43,13 @@ def run_and_plot(args):
 
             # Determine target and current demo class
             target_pose = env.env.robot.target.pose().xyz()[:2]
-            pos = 0.15
-            dist = 0.005
-            t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
-            t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
-            t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
-            t11 = np.linalg.norm(target_pose-[pos,pos])<dist
-            if not (t00): 
+            t00, t01, t10, t11 = targets(target_pose)
+            if not t00: 
             #if not (t00 or t01 or t10 or t11): 
                 #print("Goal not accepted")
                 continue  # Skip following lines if cordinates alternate
+            
+            goals+=1
             
             # SGAIL agent
             if is_encode:
@@ -94,13 +92,11 @@ def run_and_plot(args):
             print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))
 
             finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
+            print(np.linalg.norm(target_pose - finger_pose))
             # Look if goal was reached
             if np.linalg.norm(target_pose - finger_pose) < 0.05:
-                goals+=1
                 reached+=1
-            else:
-                goals+=1
-
+            
             if num_steps >= 10000:
                 break
             
@@ -116,7 +112,7 @@ def run_and_plot(args):
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
+parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')

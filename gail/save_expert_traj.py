@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from itertools import count
 from utils import *
+from estimate_target import targets
 
 
 parser = argparse.ArgumentParser(description='Save expert trajectory')
@@ -54,12 +55,7 @@ def main_loop():
 
         # Determine target and current demo class
         target_pose = env.env.robot.target.pose().xyz()[:2]
-        pos = 0.15
-        dist = 0.005
-        t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
-        t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
-        t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
-        t11 = np.linalg.norm(target_pose-[pos,pos])<dist
+        t00, t01, t10, t11 = targets(target_pose, dist=0.005)
         if not (t00 or t01 or t10 or t11): 
             #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate

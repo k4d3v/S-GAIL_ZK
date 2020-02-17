@@ -12,13 +12,14 @@ from itertools import count
 from utils import *
 from utils.get_reacher_vars import get_exp
 
+from estimate_target import targets
 
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_comp_350.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_full_100.p", metavar='G',
                     help='name of the model') # TODO: Relative path
-parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
+parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
 parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')
@@ -55,17 +56,14 @@ def main_loop():
 
         # Determine target and current demo class
         target_pose = env.env.robot.target.pose().xyz()[:2]
-        pos = 0.15
-        dist = 0.005
-        t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
-        t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
-        t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
-        t11 = np.linalg.norm(target_pose-[pos,pos])<dist
-        if not (t00): 
+        t00, t01, t10, t11 = targets(target_pose)
+        if not t00: 
         #if not (t00 or t01 or t10 or t11): 
             #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate
         
+        goals+=1
+
         # SGAIL agent
         if is_encode:
             encode = [0,0,0,1] if t00 else [0,0,1,0] if t01 else [0,1,0,0] if t10 else [1,0,0,0]
@@ -110,10 +108,7 @@ def main_loop():
         print(np.linalg.norm(target_pose - finger_pose))
         # Look if goal was reached
         if np.linalg.norm(target_pose - finger_pose) < 0.05:
-            goals+=1
             reached+=1
-        else:
-            goals+=1
 
         if num_steps >= args.max_expert_state_num:
             break

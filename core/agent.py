@@ -43,11 +43,13 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             # Determine target and current demo class
             target_pose = env.env.robot.target.pose().xyz()[:2]
             t00, t01, t10, t11 = targets(target_pose)
-            if not (t00): 
+            if not t00: 
             #if not (t00 or t01 or t10 or t11): 
                 #print("Goal not accepted")
                 continue  # Skip following lines if cordinates alternate
-            
+        
+        goals+=1
+
         if is_encode:
             encode = np.zeros(encode_dim, dtype=np.float32)
             encode[encode_list[num_episodes]] = 1
@@ -106,26 +108,12 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
             state = next_state
 
-        if custom_reward is not None:
-            # Determine target
-            target_pose = env.env.robot.target.pose().xyz()[:2]
-            pos = 0.15
-            dist = 0.005
-            t00 = np.linalg.norm(target_pose-[-pos,-pos])<dist
-            t01 = np.linalg.norm(target_pose-[-pos,pos])<dist
-            t10 = np.linalg.norm(target_pose-[pos,-pos])<dist
-            t11 = np.linalg.norm(target_pose-[pos,pos])<dist
-            
-            agoal = t00
-
+        if targets_est:
             finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
             # Look if goal was reached
-            if agoal and np.linalg.norm(target_pose - finger_pose) < dist:
-                goals+=1
+            if np.linalg.norm(target_pose - finger_pose) < 0.05:
                 reached+=1
-            elif agoal:
-                goals+=1
-
+            
         # log stats
         num_steps += (t + 1)
         num_episodes += 1
