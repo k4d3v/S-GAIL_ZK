@@ -1,9 +1,8 @@
 IMAGE_NAME="sgail_zlatko"
 
-# IMAGE_NAME="tensorflow/tensorflow:0.12.0-gpu-py3"
-
 docker run --rm -it \
     --privileged \
+    --net=host\
     --gpus all \
     -e DISPLAY=$DISPLAY\
     -e LOCAL_UID=$(id -u $USER) \

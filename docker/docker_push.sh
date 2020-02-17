@@ -1,3 +1,3 @@
 #!/bin/bash
-IMAGE_NAME="zaku.sys.es.osaka-u.ac.jp:10081/miyazawa/situatedgail_pybullet"
+IMAGE_NAME="sgail_zlatko"
 docker push ${IMAGE_NAME}
