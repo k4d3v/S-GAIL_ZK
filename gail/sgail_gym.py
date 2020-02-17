@@ -35,11 +35,12 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
     Reward based on Discriminator and Generator net output as described in SGAIL
     """
     # TODO: Fix
-    state_action = tensor(np.hstack([state, action]), dtype=dtype)
-    
+    saep = tensor(np.hstack((state, action, encode, policy)), dtype=dtype)
     with torch.no_grad():
-        return -( math.log(discrim_net(state_action)[0].item()) \
-               - math.log(1 - discrim_net(state_action)[0].item()) )
+        return -( math.log(discrim_net(saep)[0].item()) \
+               - math.log(1 - discrim_net(saep)[0].item()) 
+               + beta*math.log(policy[0]+ 1e-10)
+               )
                #+ beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
         
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
@@ -107,7 +108,7 @@ def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
-        batch, log = agent.collect_samples(args.min_batch_size, state_min, state_max, action_min, action_max, beta, encode_list=encode_labels)
+        batch, log = agent.collect_samples(args.min_batch_size, beta, encode_list=encode_labels)
         discrim_net.to(device)
 
         t0 = time.time()
@@ -159,7 +160,7 @@ torch.manual_seed(args.seed)
 env.seed(args.seed)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
-state_dim, action_dim, is_disc_action, expert_sa, running_state, encodes, state_max, state_min, action_max, action_min = get_exp(env, args)
+state_dim, action_dim, is_disc_action, expert_sa, running_state, encodes = get_exp(env, args)
 running_state.fix = True
 encode_dim = encodes.shape[1]
 
@@ -186,7 +187,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=gail_reward,
+agent = Agent(env, policy_net, device, custom_reward=sgail_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 
