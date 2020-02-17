@@ -22,7 +22,7 @@ def run_and_plot(args):
 
     # Iterate over all models
     reached_rel = []
-    iters_list = range(10, 501, 10)
+    iters_list = range(10, 1001, 10)
     for iters in iters_list:
         print("Current model trained for "+str(iters)+" iterations")
 
@@ -37,7 +37,7 @@ def run_and_plot(args):
 
         # Perform 20 episodes
         i_episode = 0
-        while i_episode<20:
+        while i_episode<50:
             state = env.reset()
             state = running_state(state)
 
@@ -84,7 +84,7 @@ def run_and_plot(args):
                 if args.render:
                     time.sleep(0.1 / 60.)  # For human-friendly visualization
                     env.render(mode="human")
-                if done or num_steps >= args.max_expert_state_num:
+                if done:
                     break
 
                 state = next_state
@@ -96,9 +96,6 @@ def run_and_plot(args):
             # Look if goal was reached
             if np.linalg.norm(target_pose - finger_pose) < 0.05:
                 reached+=1
-            
-            if num_steps >= 10000:
-                break
             
             i_episode+=1
             
@@ -112,14 +109,12 @@ def run_and_plot(args):
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
+parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=2000, metavar='N', 
-                    help='maximal number of main iterations (default: 50000)')
 args = parser.parse_args()
 
 dtype = torch.float64
