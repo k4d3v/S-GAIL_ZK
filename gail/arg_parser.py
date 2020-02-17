@@ -36,7 +36,7 @@ def prep_parser():
                         help='maximal number of main iterations (default: 5000)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 2)')
-    parser.add_argument('--save-model-interval', type=int, default=50, metavar='N',
+    parser.add_argument('--save-model-interval', type=int, default=10, metavar='N',
                         help="interval between saving model (default: 0, means don't save)")
     parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
     # Args for SGAIL: Beta and beta change, encode_dim

@@ -17,9 +17,9 @@ from estimate_target import targets
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_full_100.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_comp_240.p", metavar='G',
                     help='name of the model') # TODO: Relative path
-parser.add_argument('--lower_dim', type=int, default=10000, metavar='N',
+parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
 parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')

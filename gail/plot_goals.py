@@ -92,7 +92,7 @@ def run_and_plot(args):
             print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))
 
             finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
-            print(np.linalg.norm(target_pose - finger_pose))
+            #print(np.linalg.norm(target_pose - finger_pose))
             # Look if goal was reached
             if np.linalg.norm(target_pose - finger_pose) < 0.05:
                 reached+=1
