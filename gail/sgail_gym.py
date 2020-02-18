@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
 from utils.get_reacher_vars import get_exp
-from utils.plot_rewards import plot_r
+from utils.plot_rewards import *
 from arg_parser import prep_parser
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
@@ -97,7 +97,7 @@ def update_params(batch):
 
 
 def main_loop():
-    rew_expert, rew_system = [], []
+    rew_expert, rew_system, rel_goals = [], [], []
 
     # Labels for sampled trajectories
     encode_labels = [tuple(range(encode_dim)) for _ in range(encodes.shape[0])]
@@ -121,6 +121,7 @@ def main_loop():
         t1 = time.time()
         rew_expert.append(log['avg_c_reward'])
         rew_system.append(log['avg_reward'])
+        rel_goals.append(log['reached_goals']/log['goals'])
 
         if i_iter % args.log_interval == 0:
             print("beta: ", beta)
@@ -136,7 +137,7 @@ def main_loop():
         """clean up gpu memory"""
         torch.cuda.empty_cache()
 
-    return rew_expert, rew_system
+    return rew_expert, rew_system, rel_goals
 
 ### Starting main procedures
 
@@ -201,8 +202,9 @@ for t in range(expert_sa.shape[0]):
     expert_traj[t] = np.hstack((expert_sa[t],encodes[t],pol))
 
 # Finally do the learning
-re, rs = main_loop()
+re, rs, rg = main_loop()
 
 # Plot results
 plot_r(re, "Expert", args.env_name)
 plot_r(rs, "Environment", args.env_name)
+plot_reached(range(len(rg)), rg, args.env_name, "comp" if lower_dim else "full")

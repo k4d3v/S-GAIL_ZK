@@ -32,11 +32,11 @@ def prep_parser():
                         help='random seed (default: 1)')
     parser.add_argument('--min-batch-size', type=int, default=6144, metavar='N',
                         help='minimal batch size per PPO update (default: 2048)')
-    parser.add_argument('--max-iter-num', type=int, default=40, metavar='N',
+    parser.add_argument('--max-iter-num', type=int, default=2000, metavar='N',
                         help='maximal number of main iterations (default: 5000)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='interval between training status logs (default: 2)')
-    parser.add_argument('--save-model-interval', type=int, default=20, metavar='N',
+    parser.add_argument('--save-model-interval', type=int, default=50, metavar='N',
                         help="interval between saving model (default: 0, means don't save)")
     parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
     # Args for SGAIL: Beta and beta change, encode_dim
