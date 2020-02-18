@@ -18,11 +18,11 @@ parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_trpo_full.p", metavar='G',
                     help='name of the expert model') # TODO: Relative path
-parser.add_argument('--render', action='store_true', default=True,
+parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--max-expert-state-num', type=int, default=10000, metavar='N',
+parser.add_argument('--max-expert-state-num', type=int, default=25000, metavar='N',
                     help='maximal number of main iterations (default: 100000)')
 args = parser.parse_args()
 

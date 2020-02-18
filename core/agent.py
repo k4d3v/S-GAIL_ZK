@@ -8,7 +8,7 @@ from utils.torch import *
 import math
 import time
 
-from gail.estimate_target import targets
+from gail.estimate_target import *
 
 
 def collect_samples(pid, queue, env, policy, custom_reward,
@@ -32,10 +32,10 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     num_episodes = 0
 
     is_encode = not (encode_list is None)
-    encode_dim = np.max(encode_list)+1 if is_encode else 0
+    encode_dim = np.max(encode_list)+1 if is_encode else 1
     goals, reached = 0, 0
     
-    while num_steps < min_batch_size:
+    while num_steps < min_batch_size*encode_dim:
         state = env.reset()
         state = running_state(state)
 
@@ -43,16 +43,21 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             # Determine target and current demo class
             target_pose = env.env.robot.target.pose().xyz()[:2]
             t00, t01, t10, t11 = targets(target_pose)
-            if not t00: 
-            #if not (t00 or t01 or t10 or t11): 
-                #print("Goal not accepted")
-                continue  # Skip following lines if cordinates alternate
-        
-        goals+=1
 
-        if is_encode:
-            encode = np.zeros(encode_dim, dtype=np.float32)
-            encode[encode_list[num_episodes]] = 1
+            if is_encode:
+                encode = np.zeros(encode_dim, dtype=np.float32)
+                encode[encode_list[num_episodes]] = 1
+
+                if not ((t00 and np.array_equal(encode,[0,0,0,1]))  # Blue left
+                    or (t01 and np.array_equal(encode,[0,0,1,0]))  # White up
+                    or (t10 and np.array_equal(encode,[0,1,0,0]))  # White down
+                    or (t11 and np.array_equal(encode,[1,0,0,0]))):  # Blue right
+                    continue  # Skip following lines if cordinates alternate
+
+            elif not t00: 
+                continue  # Skip following lines if cordinates alternate
+            
+        goals+=1
 
         if lower_dim:
             if env_name == "ReacherPyBulletEnv-v0":
@@ -109,10 +114,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             state = next_state
 
         if targets_est:
-            finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
             # Look if goal was reached
-            if np.linalg.norm(target_pose - finger_pose) < 0.05:
-                reached+=1
+            reached+=goal_reached(target_pose, env.env.robot.fingertip.pose().xyz()[:2])
             
         # log stats
         num_steps += (t + 1)

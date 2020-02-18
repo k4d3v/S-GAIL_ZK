@@ -36,6 +36,7 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
     """
     # TODO: Fix
     saep = tensor(np.hstack((state, action, encode, policy)), dtype=dtype)
+    #print(math.log(policy[0]+ 1e-10))
     with torch.no_grad():
         return -( math.log(discrim_net(saep)[0].item()) \
                - math.log(1 - discrim_net(saep)[0].item()) 
@@ -43,6 +44,7 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
                )
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
+
 
 def update_params(batch):
     states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
@@ -120,7 +122,6 @@ def main_loop():
         rew_expert.append(log['avg_c_reward'])
         rew_system.append(log['avg_reward'])
 
-
         if i_iter % args.log_interval == 0:
             print("beta: ", beta)
             print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
@@ -128,7 +129,8 @@ def main_loop():
 
         if args.save_model_interval > 0 and (i_iter + 1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
-            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_sgail_{}.p'.format(args.env_name, "comp" if lower_dim else "full")), 'wb'))
+            pickle.dump((policy_net, value_net, discrim_net, running_state), 
+                open(os.path.join(assets_dir(), 'learned_models/{}_sgail_{}_{}.p'.format(args.env_name, "comp" if lower_dim else "full", str(i_iter+1))), 'wb'))
             to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
@@ -185,7 +187,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=sgail_reward, targets=True,
+agent = Agent(env, policy_net, device, custom_reward=gail_reward, targets=True,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 

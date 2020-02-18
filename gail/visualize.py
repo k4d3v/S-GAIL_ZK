@@ -11,13 +11,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from itertools import count
 from utils import *
 from utils.get_reacher_vars import get_exp
-
-from estimate_target import targets
+from estimate_target import *
 
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_comp_240.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_comp_230.p", metavar='G',
                     help='name of the model') # TODO: Relative path
 parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
@@ -104,11 +103,8 @@ def main_loop():
 
         print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))
 
-        finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
-        print(np.linalg.norm(target_pose - finger_pose))
         # Look if goal was reached
-        if np.linalg.norm(target_pose - finger_pose) < 0.05:
-            reached+=1
+        reached+=goal_reached(target_pose, env.env.robot.fingertip.pose().xyz()[:2])
 
         if num_steps >= args.max_expert_state_num:
             break

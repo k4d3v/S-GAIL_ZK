@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
 from utils.get_reacher_vars import get_exp 
-from utils.plot_rewards import plot_r
+from utils.plot_rewards import *
 from arg_parser import prep_parser
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
@@ -21,26 +21,27 @@ from core.common import estimate_advantages
 from core.agent import Agent
 
 
-def gail_reward(state, action, beta):
+def gail_reward(state, action, encode=[], policy=[], beta=None):
     """
     Reward based on Discriminator net output as described in GAIL
     """
-    state_action = tensor(np.hstack([state, action]), dtype=dtype)
+    saep = tensor(np.hstack((state, action, encode, policy)), dtype=dtype)
     with torch.no_grad():
-        return -math.log(discrim_net(state_action)[0].item())
+        return -math.log(discrim_net(saep)[0].item())
 
 
-def sgail_reward(state, action, beta):
+def sgail_reward(state, action, encode=[], policy=[], beta=None):
     """
     Reward based on Discriminator and Generator net output as described in SGAIL
     """
     # TODO: Fix
-    state_action = tensor(np.hstack([state, action]), dtype=dtype)
+    saep = tensor(np.hstack((state, action, encode, policy)), dtype=dtype)
+    #print(math.log(policy[0]+ 1e-10))
     with torch.no_grad():
-        return - math.log(discrim_net(state_action)[0].item()) \
-               + math.log(1 - discrim_net(state_action)[0].item())
-               #- beta * policy_net.get_log_prob(torch.from_numpy(np.stack([state])).to(dtype), torch.from_numpy(np.stack([action])).to(dtype))[0].item())
-        
+        return -( math.log(discrim_net(saep)[0].item()) \
+               - math.log(1 - discrim_net(saep)[0].item()) 
+               + beta*math.log(policy[0]+ 1e-10)
+               )
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
 
@@ -88,7 +89,7 @@ def update_params(batch):
 
 
 def main_loop():
-    rew_expert, rew_system = [], []
+    rew_expert, rew_system, rel_goals = [], [], []
 
     beta = args.beta
     delta_beta = -args.w
@@ -108,6 +109,7 @@ def main_loop():
         t1 = time.time()
         rew_expert.append(log['avg_c_reward'])
         rew_system.append(log['avg_reward'])
+        rel_goals.append(log['reached_goals']/log['goals'])
 
         if i_iter % args.log_interval == 0:
             print("beta: ", beta)
@@ -117,13 +119,14 @@ def main_loop():
 
         if args.save_model_interval > 0 and (i_iter + 1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
-            pickle.dump((policy_net, value_net, discrim_net, running_state), open(os.path.join(assets_dir(), 'learned_models/{}_gail_{}_{}.p'.format(args.env_name, "comp" if lower_dim else "full", str(i_iter+1))), 'wb'))
+            pickle.dump((policy_net, value_net, discrim_net, running_state), 
+                open(os.path.join(assets_dir(), 'learned_models/{}_gail_{}_{}.p'.format(args.env_name, "comp" if lower_dim else "full", str(i_iter+1))), 'wb'))
             to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
         torch.cuda.empty_cache()
 
-    return rew_expert, rew_system
+    return rew_expert, rew_system, rel_goals
 
 
 ### Starting main procedures
@@ -151,10 +154,11 @@ env.seed(args.seed)
 state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d = get_exp(env, args)
 # 2400 1900 2250 3450 (10k)
 # 4500 4350 5150 6000 (20k)
+# 5850 5100 6700 7350 (25k)
 # 11250 11400 14600 12750 (50k)
 # 24450 24250 27300 24000 (100k)
-expert_traj = expert_traj[:2400]
-encodes_d = encodes_d[:2400]
+expert_traj = expert_traj[:5850]
+encodes_d = encodes_d[:5850]
 running_state.fix = True
 
 """define actor and critic"""
@@ -186,8 +190,9 @@ agent = Agent(env, policy_net, device, custom_reward=gail_reward, targets=True,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 # Finally do the learning
-re, rs = main_loop()
+re, rs, rg = main_loop()
 
 # Plot results
 plot_r(re, "Expert", args.env_name)
 plot_r(rs, "Environment", args.env_name)
+plot_reached(range(len(rg)), rg, args.env_name, "comp" if lower_dim else "full")

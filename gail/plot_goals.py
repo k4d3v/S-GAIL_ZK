@@ -14,7 +14,7 @@ from itertools import count
 from utils import *
 
 from utils.plot_rewards import plot_reached
-from estimate_target import targets
+from estimate_target import *
 
 
 def run_and_plot(args):
@@ -82,7 +82,7 @@ def run_and_plot(args):
                 num_steps += 1
 
                 if args.render:
-                    time.sleep(0.1 / 60.)  # For human-friendly visualization
+                    time.sleep(0.01 / 60.)  # For human-friendly visualization
                     env.render(mode="human")
                 if done:
                     break
@@ -91,11 +91,8 @@ def run_and_plot(args):
 
             print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))
 
-            finger_pose = env.env.robot.fingertip.pose().xyz()[:2]
-            #print(np.linalg.norm(target_pose - finger_pose))
             # Look if goal was reached
-            if np.linalg.norm(target_pose - finger_pose) < 0.05:
-                reached+=1
+            reached+=goal_reached(target_pose, env.env.robot.fingertip.pose().xyz()[:2])
             
             i_episode+=1
             
