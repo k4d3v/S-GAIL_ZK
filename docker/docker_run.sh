@@ -3,10 +3,14 @@ IMAGE_NAME="sgail_zlatko"
 docker run --rm -it \
     --privileged \
     --net=host\
-    --gpus all \
     -e DISPLAY=$DISPLAY\
     -e LOCAL_UID=$(id -u $USER) \
     -e LOCAL_GID=$(id -g $USER) \
+    -e USE_VNC='true' \
+    -e CHANGE_USER='true' \
+    -e SCREEN_RESOLUTION=1920x1800x24 \
+    -e VNC_PASSWORD=passpass \
+    -e DISPLAY=":5" \
     -v $(pwd)/../:/home/developer/S-GAIL_ZK \
     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
     -p 8888-8899:8888 \
