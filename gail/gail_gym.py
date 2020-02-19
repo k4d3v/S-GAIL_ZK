@@ -152,6 +152,7 @@ env.seed(args.seed)
 
 """Load expert trajs and encode labels+other important stuff for Reacher (state compression)"""
 state_dim, action_dim, is_disc_action, expert_traj, running_state, encodes_d = get_exp(env, args)
+# 1200 1100 1500 1200 (5k)
 # 2400 1900 2250 3450 (10k)
 # 4500 4350 5150 6000 (20k)
 # 5850 5100 6700 7350 (25k)
