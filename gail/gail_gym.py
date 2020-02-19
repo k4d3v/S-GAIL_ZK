@@ -38,10 +38,10 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
     saep = tensor(np.hstack((state, action, encode, policy)), dtype=dtype)
     #print(math.log(policy[0]+ 1e-10))
     with torch.no_grad():
-        return -( math.log(discrim_net(saep)[0].item()) \
-               - math.log(1 - discrim_net(saep)[0].item()) 
-               + beta*math.log(policy[0]+ 1e-10)
-               )
+        D = discrim_net(saep)[0].item()
+        return -( math.log(D) - math.log(1 - D) 
+            + beta*math.log(policy[0]+ 1e-10)
+            )
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
 
