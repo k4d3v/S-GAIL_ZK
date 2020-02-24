@@ -40,19 +40,23 @@ def sgail_reward(state, action, encode=[], policy=[], beta=None):
     with torch.no_grad():
         D = discrim_net(saep)[0].item()
         return -( math.log(D) - math.log(1 - D) 
-            + beta*math.log(policy[0]+ 1e-10)
+            #+ beta*math.log(np.max([policy[0], 1e-10]))
             )
         # log(D) - log(1-D) + beta*log(pi) (Sure about pol.?)
         # Entropy regularization term
 
 
-def update_params(batch):
+def update_params(batch, beta=None):
     states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
     actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
     rewards = torch.from_numpy(np.stack(batch.reward)).to(dtype).to(device)
     masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
     g_encodes = torch.from_numpy(np.stack(batch.encode)).to(dtype).to(device)
     policies = torch.from_numpy(np.stack(batch.policy)).to(dtype).to(device)
+
+    if beta is not None:
+        max_ent = np.log(np.max([np.max(np.array(batch.policy).flatten()), 1e-10]))
+        rewards += beta*max_ent
 
     g_states_encodes = torch.cat((states, g_encodes), dim=1)
 
@@ -113,7 +117,7 @@ def main_loop():
 
         t0 = time.time()
         # Update params of V, G, D
-        update_params(batch)
+        update_params(batch, beta)
         # Modulate entropy correction param
         beta += delta_beta
 
@@ -188,7 +192,7 @@ optim_epochs = 10  # 10
 optim_batch_size = 64  # 64
 
 """create agent"""
-agent = Agent(env, policy_net, device, custom_reward=gail_reward, targets=True,
+agent = Agent(env, policy_net, device, custom_reward=sgail_reward, targets=True,
               running_state=running_state, render=args.render, num_threads=args.num_threads, lower_dim=lower_dim)
 
 
@@ -205,6 +209,6 @@ for t in range(expert_sa.shape[0]):
 re, rs, rg = main_loop()
 
 # Plot results
-plot_r(re, "Expert", args.env_name)
-plot_r(rs, "Environment", args.env_name)
-plot_reached(range(len(rg)), rg, args.env_name, "comp" if lower_dim else "full")
+plot_r(re, "Expert", args.env_name, "sgail")
+plot_r(rs, "Environment", args.env_name, "sgail")
+plot_reached(range(len(rg)), rg, args.env_name, "comp" if lower_dim else "full", "sgail")

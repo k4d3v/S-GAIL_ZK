@@ -22,12 +22,12 @@ def run_and_plot(args):
 
     # Iterate over all models
     reached_rel = []
-    iters_list = range(10, 1001, 10)
+    iters_list = range(50, 2001, 50)
     for iters in iters_list:
         print("Current model trained for "+str(iters)+" iterations")
 
         """Load a model"""
-        model_path = os.path.join(assets_dir(), 'learned_models/{}_gail_{}_{}.p'.format(args.env_name, "comp" if lower_dim else "full", str(iters)))
+        model_path = os.path.join(assets_dir(), 'learned_models/{}_sgail_{}_{}.p'.format(args.env_name, "comp" if lower_dim else "full", str(iters)))
         policy_net, _, _, running_state = pickle.load(open(model_path, "rb"))
         is_encode = env.observation_space.shape[0] < policy_net.affine_layers[0].in_features
 
@@ -35,7 +35,7 @@ def run_and_plot(args):
         num_steps = 0
         goals, reached = 0,0
 
-        # Perform 20 episodes
+        # Perform 50 episodes
         i_episode = 0
         while i_episode<50:
             state = env.reset()
@@ -44,8 +44,8 @@ def run_and_plot(args):
             # Determine target and current demo class
             target_pose = env.env.robot.target.pose().xyz()[:2]
             t00, t01, t10, t11 = targets(target_pose)
-            if not t00: 
-            #if not (t00 or t01 or t10 or t11): 
+            #if not t00: 
+            if not (t00 or t01 or t10 or t11): 
                 #print("Goal not accepted")
                 continue  # Skip following lines if cordinates alternate
             
@@ -82,7 +82,7 @@ def run_and_plot(args):
                 num_steps += 1
 
                 if args.render:
-                    time.sleep(0.01 / 60.)  # For human-friendly visualization
+                    time.sleep(0.1 / 60.)  # For human-friendly visualization
                     env.render(mode="human")
                 if done:
                     break
@@ -108,7 +108,7 @@ parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
-parser.add_argument('--render', action='store_true', default=False,
+parser.add_argument('--render', action='store_true', default=True,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')

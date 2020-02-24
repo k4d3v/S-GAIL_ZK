@@ -16,7 +16,7 @@ from estimate_target import *
 parser = argparse.ArgumentParser(description='Rollout learner')
 parser.add_argument('--env-name', default="ReacherPyBulletEnv-v0", metavar='G',
                     help='name of the environment to run')
-parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_sgail_comp_950.p", metavar='G',
+parser.add_argument('--model-path', default="/home/developer/S-GAIL_ZK/assets/learned_models/ReacherPyBulletEnv-v0_gail_comp_1000.p", metavar='G',
                     help='name of the model') # TODO: Relative path
 parser.add_argument('--lower_dim', type=int, default=6, metavar='N',
                     help='Lower dimension. Is smaller than dim of state, if on (default: 10000)')
@@ -56,8 +56,8 @@ def main_loop():
         # Determine target and current demo class
         target_pose = env.env.robot.target.pose().xyz()[:2]
         t00, t01, t10, t11 = targets(target_pose)
-        if not t00: 
-        #if not (t00 or t01 or t10 or t11): 
+        #if not t00: 
+        if not (t00 or t01 or t10 or t11): 
             #print("Goal not accepted")
             continue  # Skip following lines if cordinates alternate
         
