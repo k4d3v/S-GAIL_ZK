@@ -4,6 +4,7 @@ This repository contains:
 2. [Generative Adversarial Imitation Learning (GAIL)](https://arxiv.org/pdf/1606.03476.pdf)
 1, 2 taken from https://github.com/Khrylx/PyTorch-RL
 3. [Situated Generative Adversarial Imitation Learning (S-GAIL)] based on 2.
+4. Automatic clustering of trajectories, see https://github.com/Shathra/comparing-trajectory-clustering-methods
 
 ## Important notes
 - To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and [gym](https://github.com/openai/gym).
@@ -37,3 +38,14 @@ export OMP_NUM_THREADS=1
 ### To do imitation learning
 * python gail/gail_gym.py --env-name Hopper-v2 --expert-traj-path assets/expert_traj/Hopper-v2_expert_traj.p
 * python gail/sgail_gym.py --env-name Hopper-v2 --expert-traj-path assets/expert_traj/Hopper-v2_expert_traj.p
+
+### Alternative (preffered) execution:
+In VS Code, edit arg_parser.py for hyperparams and env, then run sgail_gym.py (You can choose a custom reward in line 195). For saving expert trajectories, the arguments can be edited in lines 16-28 of gail/save_expert_traj.py
+
+### Other scripts
+* run visualize.py will execute a learnt policy and show the environment to the user.
+* run plot_goals.py will execute learnt policies and plot the number of goals reached.
+
+## Trajectory Clustering
+### To perform clustering
+* run cluster_trajs.py
